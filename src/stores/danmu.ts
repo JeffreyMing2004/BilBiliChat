@@ -72,7 +72,7 @@ export const useDanmuStore = defineStore('danmu', () => {
           settingsStore.userBlacklist,
         )
       ) {
-        playMessageSound(message)
+        playMessageSound(message, settingsStore.settings)
       }
     })
   }

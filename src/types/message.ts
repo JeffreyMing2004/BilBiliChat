@@ -5,6 +5,7 @@ export interface BaseMessage {
   id: string
   type: MessageType
   timestamp: string
+  createdAt: number
   username: string
   rawCommand: string
   summary: string

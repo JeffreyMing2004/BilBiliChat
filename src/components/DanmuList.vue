@@ -95,7 +95,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 
-import { shouldFilterMessage } from '../filters'
+import { filterMessages } from '../filters'
 import { useDanmuStore } from '../stores/danmu'
 import { useSettingsStore } from '../stores/settings'
 import { getCurrentWindowLabel } from '../windows/shared/manager'
@@ -113,12 +113,12 @@ const viewportHeight = ref(600)
 
 const filteredMessages = computed(() => {
   const messages = store.activeRoom?.messages ?? []
-  const visibleMessages = messages.filter((message) => !shouldFilterMessage(
-    message,
+  const visibleMessages = filterMessages(
+    messages,
     settingsStore.settings,
     settingsStore.keywordFilters,
     settingsStore.userBlacklist,
-  ))
+  )
 
   return settingsStore.settings.direction === 'top-down'
     ? [...visibleMessages].reverse()

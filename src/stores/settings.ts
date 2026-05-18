@@ -1,53 +1,9 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 
-import { loadStorageItem, saveStorageItem, settingsStorageKey } from '../settings'
+import { settingsStorageKey } from '../settings'
+import { DEFAULT_SETTINGS, normalizeSettings, settingsManager, splitTextList } from '../modules/settings'
 import type { AppSettings } from '../types/settings'
-
-const DEFAULT_SETTINGS: AppSettings = {
-  theme: 'dark',
-  obsMode: false,
-  autoReconnect: true,
-  fontSize: 28,
-  overlayOpacity: 88,
-  maxMessages: 500,
-  animationsEnabled: true,
-  soundEnabled: false,
-  direction: 'bottom-up',
-  messageSpacing: 12,
-  animationSpeed: 1,
-  clickThrough: false,
-  alwaysOnTop: false,
-  minimizeToTray: true,
-  hideGift: false,
-  hideEntry: false,
-  hideSystem: false,
-  keywordFiltersText: '',
-  userBlacklistText: '',
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value))
-}
-
-function normalizeSettings(input: AppSettings): AppSettings {
-  return {
-    ...DEFAULT_SETTINGS,
-    ...input,
-    fontSize: clamp(input.fontSize, 18, 64),
-    overlayOpacity: clamp(input.overlayOpacity, 10, 100),
-    maxMessages: clamp(input.maxMessages, 100, 500),
-    messageSpacing: clamp(input.messageSpacing, 4, 32),
-    animationSpeed: clamp(input.animationSpeed, 0.4, 1.8),
-  }
-}
-
-function splitFilterText(input: string): string[] {
-  return input
-    .split(/[\n,，]/g)
-    .map((item) => item.trim().toLowerCase())
-    .filter(Boolean)
-}
 
 export const useSettingsStore = defineStore('settings', () => {
   const settings = ref<AppSettings>(DEFAULT_SETTINGS)
@@ -55,17 +11,12 @@ export const useSettingsStore = defineStore('settings', () => {
   const settingsVisible = ref(false)
   let storageBound = false
 
-  const keywordFilters = computed(() => splitFilterText(settings.value.keywordFiltersText))
-  const userBlacklist = computed(() => splitFilterText(settings.value.userBlacklistText))
-  const overlayStyleVars = computed<Record<string, string>>(() => ({
-    '--overlay-font-size': `${settings.value.fontSize}px`,
-    '--overlay-opacity': String(settings.value.overlayOpacity / 100),
-    '--overlay-spacing': `${settings.value.messageSpacing}px`,
-    '--overlay-animation-speed': `${settings.value.animationSpeed}s`,
-  }))
+  const keywordFilters = computed(() => splitTextList(settings.value.keywordFiltersText))
+  const userBlacklist = computed(() => splitTextList(settings.value.userBlacklistText))
+  const overlayStyleVars = computed<Record<string, string>>(() => settingsManager.toStyleVars(settings.value))
 
   function persist(): void {
-    saveStorageItem(settingsStorageKey(), settings.value)
+    settingsManager.save(settings.value)
   }
 
   function bindStorageSync(): void {
@@ -92,7 +43,7 @@ export const useSettingsStore = defineStore('settings', () => {
       return
     }
 
-    settings.value = normalizeSettings(loadStorageItem(settingsStorageKey(), DEFAULT_SETTINGS))
+    settings.value = settingsManager.load()
     bindStorageSync()
     initialized.value = true
   }
@@ -106,8 +57,7 @@ export const useSettingsStore = defineStore('settings', () => {
   }
 
   function resetSettings(): void {
-    settings.value = DEFAULT_SETTINGS
-    persist()
+    settings.value = settingsManager.reset()
   }
 
   function toggleObsMode(force?: boolean): void {

@@ -16,6 +16,12 @@
     <div class="settings-group">
       <h3>显示与窗口</h3>
       <div class="settings-item">
+        <span>深色主题</span>
+        <el-tag effect="dark">
+          {{ settingsStore.settings.theme === 'dark' ? 'Dark' : settingsStore.settings.theme }}
+        </el-tag>
+      </div>
+      <div class="settings-item">
         <span>OBS 模式</span>
         <el-switch
           :model-value="settingsStore.settings.obsMode"
@@ -61,6 +67,26 @@
           :min="18"
           :max="64"
           @update:model-value="patch({ fontSize: Number($event) })"
+        />
+      </label>
+      <label class="slider-item">
+        <span>字体粗细 {{ settingsStore.settings.fontWeight }}</span>
+        <el-slider
+          :model-value="settingsStore.settings.fontWeight"
+          :min="400"
+          :max="900"
+          :step="100"
+          @update:model-value="patch({ fontWeight: Number($event) })"
+        />
+      </label>
+      <label class="slider-item">
+        <span>描边宽度 {{ settingsStore.settings.strokeWidth }}px</span>
+        <el-slider
+          :model-value="settingsStore.settings.strokeWidth"
+          :min="0"
+          :max="6"
+          :step="1"
+          @update:model-value="patch({ strokeWidth: Number($event) })"
         />
       </label>
       <label class="slider-item">
@@ -147,12 +173,44 @@
         />
       </div>
       <div class="settings-item">
+        <span>SC 消息</span>
+        <el-switch
+          :model-value="settingsStore.settings.hideSuperChat"
+          @change="patch({ hideSuperChat: Boolean($event) })"
+        />
+      </div>
+      <div class="settings-item">
         <span>音效开关</span>
         <el-switch
           :model-value="settingsStore.settings.soundEnabled"
           @change="patch({ soundEnabled: Boolean($event) })"
         />
       </div>
+      <label class="slider-item">
+        <span>音量 {{ settingsStore.settings.soundVolume }}%</span>
+        <el-slider
+          :model-value="settingsStore.settings.soundVolume"
+          :min="0"
+          :max="100"
+          @update:model-value="patch({ soundVolume: Number($event) })"
+        />
+      </label>
+      <div class="settings-item">
+        <span>重复弹幕过滤</span>
+        <el-switch
+          :model-value="settingsStore.settings.dedupeEnabled"
+          @change="patch({ dedupeEnabled: Boolean($event) })"
+        />
+      </div>
+      <label class="slider-item">
+        <span>重复过滤窗口 {{ settingsStore.settings.dedupeWindowSeconds }}s</span>
+        <el-slider
+          :model-value="settingsStore.settings.dedupeWindowSeconds"
+          :min="1"
+          :max="60"
+          @update:model-value="patch({ dedupeWindowSeconds: Number($event) })"
+        />
+      </label>
       <label class="textarea-item">
         <span>关键词过滤</span>
         <el-input
@@ -173,6 +231,87 @@
           @update:model-value="patch({ userBlacklistText: String($event) })"
         />
       </label>
+      <label class="textarea-item">
+        <span>礼物音效 URL</span>
+        <el-input
+          :model-value="settingsStore.settings.customGiftSound"
+          placeholder="留空则使用默认提示音"
+          @update:model-value="patch({ customGiftSound: String($event) })"
+        />
+      </label>
+      <label class="textarea-item">
+        <span>SC 音效 URL</span>
+        <el-input
+          :model-value="settingsStore.settings.customScSound"
+          placeholder="留空则使用默认提示音"
+          @update:model-value="patch({ customScSound: String($event) })"
+        />
+      </label>
+      <label class="textarea-item">
+        <span>进房音效 URL</span>
+        <el-input
+          :model-value="settingsStore.settings.customEntrySound"
+          placeholder="留空则使用默认提示音"
+          @update:model-value="patch({ customEntrySound: String($event) })"
+        />
+      </label>
+    </div>
+
+    <div class="settings-group">
+      <h3>自动更新</h3>
+      <div class="settings-item">
+        <span>启用自动更新</span>
+        <el-switch
+          :model-value="settingsStore.settings.updaterEnabled"
+          @change="patch({ updaterEnabled: Boolean($event) })"
+        />
+      </div>
+      <div class="settings-item">
+        <span>启动时自动检查</span>
+        <el-switch
+          :model-value="settingsStore.settings.autoCheckUpdates"
+          @change="patch({ autoCheckUpdates: Boolean($event) })"
+        />
+      </div>
+      <div class="settings-item">
+        <span>当前版本</span>
+        <strong>{{ updaterState.currentVersion }}</strong>
+      </div>
+      <div class="settings-item">
+        <span>可用更新</span>
+        <strong>{{ updaterState.availableVersion || '暂无' }}</strong>
+      </div>
+      <div
+        v-if="updaterState.lastError"
+        class="error-banner"
+      >
+        {{ updaterState.lastError }}
+      </div>
+      <div
+        v-if="updaterState.notes"
+        class="update-notes"
+      >
+        <h4>更新日志</h4>
+        <pre>{{ updaterState.notes }}</pre>
+      </div>
+      <div class="settings-actions">
+        <el-button
+          :loading="updaterState.checking"
+          :disabled="!settingsStore.settings.updaterEnabled"
+          @click="checkUpdates"
+        >
+          检查更新
+        </el-button>
+        <el-button
+          type="primary"
+          :loading="updaterState.installing"
+          :disabled="!updaterState.availableVersion"
+          @click="installUpdate"
+        >
+          下载并安装
+        </el-button>
+        <span v-if="updaterState.installing">进度 {{ updaterState.progress }}%</span>
+      </div>
     </div>
 
     <div class="settings-group">
@@ -202,7 +341,10 @@
 </template>
 
 <script setup lang="ts">
+import { ElMessage } from 'element-plus'
+
 import { exportRoomMessagesAsJson, exportRoomMessagesAsTxt } from '../export'
+import { checkForAppUpdates, downloadAndInstallUpdate, updaterState } from '../modules/updater'
 import { useDanmuStore } from '../stores/danmu'
 import { useSettingsStore } from '../stores/settings'
 import type { AppSettings } from '../types/settings'
@@ -236,5 +378,17 @@ function exportJson(): void {
   }
 
   exportRoomMessagesAsJson(store.activeRoom)
+}
+
+async function checkUpdates(): Promise<void> {
+  const available = await checkForAppUpdates()
+  ElMessage.success(available ? '发现新版本' : '当前已经是最新版本')
+}
+
+async function installUpdate(): Promise<void> {
+  const completed = await downloadAndInstallUpdate()
+  if (!completed && updaterState.lastError) {
+    ElMessage.error(updaterState.lastError)
+  }
 }
 </script>

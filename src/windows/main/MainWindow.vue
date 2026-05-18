@@ -19,7 +19,7 @@
           plain
           @click="openLogin"
         >
-          登录预留
+          {{ authStore.isLoggedIn ? '账号中心' : '立即登录' }}
         </el-button>
         <el-button
           plain
@@ -239,6 +239,47 @@
 
           <article class="dashboard-card glass-panel">
             <div class="dashboard-card-head">
+              <h3>登录状态</h3>
+              <el-tag
+                size="small"
+                :type="authStore.isLoggedIn ? 'success' : 'info'"
+              >
+                {{ authStore.isLoggedIn ? '已登录' : '未登录' }}
+              </el-tag>
+            </div>
+            <div
+              v-if="authStore.user"
+              class="auth-user-panel"
+            >
+              <img
+                v-if="authStore.user.avatar"
+                :src="authStore.user.avatar"
+                :alt="authStore.user.nickname"
+                class="auth-user-avatar"
+              >
+              <div
+                v-else
+                class="auth-user-avatar auth-user-avatar--placeholder"
+              >
+                {{ authStore.user.nickname.slice(0, 1).toUpperCase() }}
+              </div>
+              <div class="auth-user-meta">
+                <strong>{{ authStore.user.nickname }}</strong>
+                <span>UID {{ authStore.user.uid }}</span>
+                <span>Lv.{{ authStore.user.level }}</span>
+                <span>粉丝 {{ formatCount(authStore.user.fansCount) }}</span>
+              </div>
+            </div>
+            <div
+              v-else
+              class="empty-inline"
+            >
+              登录后将在这里显示 Bilibili 头像、昵称、UID、等级和粉丝数。
+            </div>
+          </article>
+
+          <article class="dashboard-card glass-panel">
+            <div class="dashboard-card-head">
               <h3>连接概览</h3>
             </div>
             <div class="info-grid">
@@ -319,6 +360,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, watch } from 'vue'
 
+import { useAuthStore } from '../../stores/auth'
 import { useDanmuStore } from '../../stores/danmu'
 import { useSettingsStore } from '../../stores/settings'
 import { initializeTrayListeners } from '../../tray'
@@ -327,6 +369,7 @@ import { initializeShortcuts } from '../../window/shortcuts'
 import { openAppWindow } from '../shared/manager'
 
 const store = useDanmuStore()
+const authStore = useAuthStore()
 const settingsStore = useSettingsStore()
 const cleanups: Array<() => void> = []
 
@@ -389,6 +432,7 @@ async function openLogin(): Promise<void> {
 
 onMounted(async () => {
   settingsStore.initialize()
+  await authStore.initialize()
   await store.initialize()
   cleanups.push(await initializeWindowState())
   cleanups.push(await initializeTrayListeners({

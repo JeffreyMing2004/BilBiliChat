@@ -18,12 +18,16 @@
 
 <script setup lang="ts">
 import { onMounted } from 'vue'
+import { getVersion } from '@tauri-apps/api/app'
 
 import SettingsPanel from '../../components/SettingsPanel.vue'
+import { initializeUpdater } from '../../modules/updater'
+import { useAuthStore } from '../../stores/auth'
 import { useDanmuStore } from '../../stores/danmu'
 import { useSettingsStore } from '../../stores/settings'
 import { closeCurrentWindow } from '../shared/manager'
 
+const authStore = useAuthStore()
 const store = useDanmuStore()
 const settingsStore = useSettingsStore()
 
@@ -33,6 +37,8 @@ async function closeWindow(): Promise<void> {
 
 onMounted(async () => {
   settingsStore.initialize()
+  await authStore.initialize()
   await store.initialize()
+  await initializeUpdater(await getVersion())
 })
 </script>
