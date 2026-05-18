@@ -1,7 +1,7 @@
 <template>
   <section class="settings-window glass-panel">
     <div class="settings-window-head">
-      <div>
+      <div data-tauri-drag-region>
         <p class="eyebrow">
           Settings
         </p>

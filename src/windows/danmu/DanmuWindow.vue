@@ -5,7 +5,7 @@
     :style="settingsStore.overlayStyleVars"
   >
     <header class="overlay-topbar">
-      <div>
+      <div data-tauri-drag-region>
         <p class="eyebrow">
           Danmu Window
         </p>

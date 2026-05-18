@@ -5,6 +5,7 @@ import { crashReporter } from '../core/crash/CrashReporter'
 import { recoveryManager } from '../core/recovery/RecoveryManager'
 import { loadStorageItem, saveStorageItem, windowStateStorageKey } from '../settings'
 import type { AppSettings, WindowStateSnapshot } from '../types/settings'
+import { isMacOS } from '../utils/platform'
 import { getCurrentWindowLabel } from '../windows/shared/manager'
 
 const DEFAULT_WINDOW_STATE: WindowStateSnapshot = {
@@ -89,17 +90,19 @@ export async function initializeWindowState(): Promise<() => void> {
 export async function applyWindowPreferences(settings: AppSettings): Promise<void> {
   const currentWindow = getCurrentWindow()
   const windowLabel = getCurrentWindowLabel()
+  const macOS = isMacOS()
+  const overlayMode = windowLabel === 'danmu' && settings.obsMode
 
   try {
     if (windowLabel === 'danmu') {
-      await currentWindow.setDecorations(false)
-      await currentWindow.setAlwaysOnTop(true)
-      await currentWindow.setSkipTaskbar(true)
-      await currentWindow.setIgnoreCursorEvents(settings.obsMode && settings.clickThrough)
+      await currentWindow.setDecorations(macOS ? !overlayMode : false)
+      await currentWindow.setAlwaysOnTop(overlayMode || settings.alwaysOnTop)
+      await currentWindow.setSkipTaskbar(overlayMode)
+      await currentWindow.setIgnoreCursorEvents(overlayMode && settings.clickThrough)
       return
     }
 
-    await currentWindow.setDecorations(false)
+    await currentWindow.setDecorations(macOS)
     await currentWindow.setAlwaysOnTop(settings.alwaysOnTop)
     await currentWindow.setSkipTaskbar(false)
     await currentWindow.setIgnoreCursorEvents(false)

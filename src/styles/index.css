@@ -561,6 +561,11 @@ input {
     var(--bg-overlay);
 }
 
+[data-tauri-drag-region] {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
 .main-shell {
   gap: 18px;
 }

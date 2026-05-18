@@ -4,7 +4,7 @@
     :style="settingsStore.overlayStyleVars"
   >
     <header class="main-topbar glass-panel">
-      <div>
+      <div data-tauri-drag-region>
         <p class="eyebrow">
           LiveDanmu Console
         </p>

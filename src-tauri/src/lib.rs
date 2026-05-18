@@ -1,9 +1,42 @@
 use tauri::{AppHandle, Emitter, Manager, WebviewUrl, WebviewWindow, WebviewWindowBuilder};
+#[cfg(target_os = "macos")]
+use tauri::TitleBarStyle;
 
 fn focus_window(window: &WebviewWindow) {
   let _ = window.show();
   let _ = window.unminimize();
   let _ = window.set_focus();
+}
+
+#[cfg(target_os = "macos")]
+fn apply_macos_native_titlebar<'a, R: tauri::Runtime, M: Manager<R>>(
+  builder: WebviewWindowBuilder<'a, R, M>,
+) -> WebviewWindowBuilder<'a, R, M> {
+  builder
+    .decorations(true)
+    .shadow(true)
+    .title_bar_style(TitleBarStyle::Visible)
+}
+
+#[cfg(not(target_os = "macos"))]
+fn apply_macos_native_titlebar<'a, R: tauri::Runtime, M: Manager<R>>(
+  builder: WebviewWindowBuilder<'a, R, M>,
+) -> WebviewWindowBuilder<'a, R, M> {
+  builder
+}
+
+#[cfg(target_os = "macos")]
+fn apply_macos_native_chrome<'a, R: tauri::Runtime, M: Manager<R>>(
+  builder: WebviewWindowBuilder<'a, R, M>,
+) -> WebviewWindowBuilder<'a, R, M> {
+  apply_macos_native_titlebar(builder).transparent(false)
+}
+
+#[cfg(not(target_os = "macos"))]
+fn apply_macos_native_chrome<'a, R: tauri::Runtime, M: Manager<R>>(
+  builder: WebviewWindowBuilder<'a, R, M>,
+) -> WebviewWindowBuilder<'a, R, M> {
+  builder
 }
 
 fn ensure_app_window(app: &AppHandle, kind: &str) -> tauri::Result<()> {
@@ -34,44 +67,66 @@ fn ensure_app_window(app: &AppHandle, kind: &str) -> tauri::Result<()> {
   };
 
   let builder = match kind {
-    "danmu" => builder
-      .inner_size(1080.0, 760.0)
-      .min_inner_size(720.0, 480.0)
-      .transparent(true)
-      .decorations(false)
-      .always_on_top(true)
-      .resizable(true)
-      .skip_taskbar(true),
-    "settings" => builder
-      .inner_size(980.0, 860.0)
-      .min_inner_size(840.0, 720.0)
-      .transparent(true)
-      .decorations(false)
-      .resizable(true),
-    "login" => builder
-      .inner_size(720.0, 460.0)
-      .min_inner_size(640.0, 420.0)
-      .transparent(true)
-      .decorations(false)
-      .resizable(false),
-    "debug" => builder
-      .inner_size(760.0, 540.0)
-      .min_inner_size(680.0, 480.0)
-      .transparent(true)
-      .decorations(false)
-      .resizable(true),
-    "crash" => builder
-      .inner_size(1120.0, 760.0)
-      .min_inner_size(920.0, 620.0)
-      .transparent(true)
-      .decorations(false)
-      .resizable(true),
-    "overlay-studio" => builder
-      .inner_size(1440.0, 900.0)
-      .min_inner_size(1180.0, 760.0)
-      .transparent(true)
-      .decorations(false)
-      .resizable(true),
+    "danmu" => {
+      let builder = builder
+        .inner_size(1080.0, 760.0)
+        .min_inner_size(720.0, 480.0)
+        .transparent(true)
+        .decorations(false)
+        .resizable(true);
+
+      #[cfg(target_os = "macos")]
+      let builder = apply_macos_native_titlebar(builder)
+        .always_on_top(false)
+        .skip_taskbar(false);
+
+      #[cfg(not(target_os = "macos"))]
+      let builder = builder
+        .always_on_top(true)
+        .skip_taskbar(true);
+
+      builder
+    }
+    "settings" => apply_macos_native_chrome(
+      builder
+        .inner_size(980.0, 860.0)
+        .min_inner_size(840.0, 720.0)
+        .transparent(true)
+        .decorations(false)
+        .resizable(true),
+    ),
+    "login" => apply_macos_native_chrome(
+      builder
+        .inner_size(720.0, 460.0)
+        .min_inner_size(640.0, 420.0)
+        .transparent(true)
+        .decorations(false)
+        .resizable(false),
+    ),
+    "debug" => apply_macos_native_chrome(
+      builder
+        .inner_size(760.0, 540.0)
+        .min_inner_size(680.0, 480.0)
+        .transparent(true)
+        .decorations(false)
+        .resizable(true),
+    ),
+    "crash" => apply_macos_native_chrome(
+      builder
+        .inner_size(1120.0, 760.0)
+        .min_inner_size(920.0, 620.0)
+        .transparent(true)
+        .decorations(false)
+        .resizable(true),
+    ),
+    "overlay-studio" => apply_macos_native_chrome(
+      builder
+        .inner_size(1440.0, 900.0)
+        .min_inner_size(1180.0, 760.0)
+        .transparent(true)
+        .decorations(false)
+        .resizable(true),
+    ),
     _ => builder,
   };
 

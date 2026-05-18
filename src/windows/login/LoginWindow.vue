@@ -1,13 +1,15 @@
 <template>
   <div class="window-shell login-shell">
     <section class="login-panel glass-panel">
-      <p class="eyebrow">
-        Login Window
-      </p>
-      <h1>{{ authStore.feature.title }}</h1>
-      <p class="window-subtitle">
-        {{ authStore.feature.description }}
-      </p>
+      <div data-tauri-drag-region>
+        <p class="eyebrow">
+          Login Window
+        </p>
+        <h1>{{ authStore.feature.title }}</h1>
+        <p class="window-subtitle">
+          {{ authStore.feature.description }}
+        </p>
+      </div>
 
       <div class="info-grid">
         <div class="info-cell">

@@ -9,6 +9,7 @@ import './design/index.css'
 import './styles/index.css'
 import { performanceMonitor } from './core/performance/PerformanceMonitor'
 import { loadBuiltinPlugins } from './sdk/loader'
+import { getDesktopPlatform } from './utils/platform'
 import { getCurrentWindowLabel } from './windows/shared/manager'
 
 function escapeHtml(value: string): string {
@@ -21,6 +22,7 @@ function escapeHtml(value: string): string {
 }
 
 async function bootstrap() {
+  document.documentElement.dataset.platform = getDesktopPlatform()
   crashReporter.installGlobalHandlers(getCurrentWindowLabel())
   const app = createApp(App)
   app.config.errorHandler = (error, instance, info) => {

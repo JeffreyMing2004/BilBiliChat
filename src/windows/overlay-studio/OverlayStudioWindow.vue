@@ -4,7 +4,7 @@
     :style="settingsStore.overlayStyleVars"
   >
     <header class="studio-topbar glass-panel">
-      <div>
+      <div data-tauri-drag-region>
         <p class="eyebrow">
           Overlay Studio
         </p>
