@@ -1,5 +1,6 @@
 import type { LiveMessage } from '../../../types/message'
 import type { AppSettings } from '../../../types/settings'
+import { reportOverlayCrash } from '../../crash/CrashReporter'
 import type { PerformanceMonitor } from '../../performance/PerformanceMonitor'
 import { logInfo } from '../../logger/Logger'
 import { recoveryManager } from '../../recovery/RecoveryManager'
@@ -180,16 +181,26 @@ export class OverlayRenderer {
       return
     }
 
-    const startedAt = performance.now()
-    const now = Date.now()
-    recoveryManager.markOverlayHeartbeat()
-    this.releaseExpiredNodes(now)
-    this.processIncomingQueue(now)
-    this.trimVisibleNodes()
-    const renderDuration = performance.now() - startedAt
-    this.performanceMonitor?.recordFrame(renderDuration)
-    this.performanceMonitor?.updateDomCount(this.activeRecords.length)
-    this.performanceMonitor?.updateQueue(this.queue.length, this.droppedMessages)
+    try {
+      const startedAt = performance.now()
+      const now = Date.now()
+      recoveryManager.markOverlayHeartbeat()
+      this.releaseExpiredNodes(now)
+      this.processIncomingQueue(now)
+      this.trimVisibleNodes()
+      const renderDuration = performance.now() - startedAt
+      this.performanceMonitor?.recordFrame(renderDuration)
+      this.performanceMonitor?.updateDomCount(this.activeRecords.length)
+      this.performanceMonitor?.updateQueue(this.queue.length, this.droppedMessages)
+    } catch (error) {
+      reportOverlayCrash('OverlayRenderer.loop', error, {
+        activeRecords: this.activeRecords.length,
+        droppedMessages: this.droppedMessages,
+        queuedMessages: this.queue.length,
+      })
+      this.clear()
+    }
+
     this.rafId = requestAnimationFrame(this.loop)
   }
 

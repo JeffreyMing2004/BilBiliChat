@@ -21,6 +21,10 @@ function resolveTheme(settings: AppSettings, fallback: DesignThemeName): DesignT
     return 'neon'
   }
 
+  if (settings.theme === 'bilibili') {
+    return 'bilibili'
+  }
+
   return fallback
 }
 
@@ -67,6 +71,10 @@ export class OverlayStyleEngine {
     this.target.style.setProperty('--overlay-opacity', String(this.settings.overlayOpacity / 100))
     this.target.style.setProperty('--overlay-spacing', `${this.settings.messageSpacing}px`)
     this.target.style.setProperty('--overlay-animation-speed', `${this.settings.animationSpeed}s`)
+    this.target.style.setProperty('--overlay-shadow-blur', `${this.settings.overlayShadowBlur}px`)
+    this.target.style.setProperty('--overlay-shadow-opacity', String(this.settings.overlayShadowOpacity / 100))
+    this.target.style.setProperty('--overlay-gift-strength', String(this.settings.giftAccentStrength / 100))
+    this.target.style.setProperty('--overlay-sc-strength', String(this.settings.superChatAccentStrength / 100))
     this.target.style.setProperty('--overlay-panel-color', theme.panel)
     this.target.style.setProperty('--overlay-panel-border', theme.panelBorder)
     this.target.style.setProperty('--overlay-text-primary', theme.textPrimary)
@@ -108,7 +116,7 @@ export class OverlayStyleEngine {
     0 1px 0 rgba(0, 0, 0, 0.88),
     1px 0 0 rgba(0, 0, 0, 0.88),
     0 -1px 0 rgba(0, 0, 0, 0.88),
-    0 0 calc(var(--overlay-stroke-width) * 8) rgba(0, 0, 0, 0.42);
+    0 0 calc(var(--overlay-shadow-blur) + var(--overlay-stroke-width) * 8) rgba(0, 0, 0, var(--overlay-shadow-opacity));
   will-change: transform, opacity;
   backface-visibility: hidden;
   transform: translate3d(0, 0, 0);
@@ -144,11 +152,12 @@ export class OverlayStyleEngine {
 
 .overlay-render-item--gift {
   border-color: color-mix(in srgb, #f59e0b 40%, transparent);
+  box-shadow: 0 10px 24px rgba(245, 158, 11, var(--overlay-gift-strength));
 }
 
 .overlay-render-item--superChat {
   border-color: color-mix(in srgb, #fb7185 42%, transparent);
-  box-shadow: 0 10px 24px rgba(251, 113, 133, 0.16);
+  box-shadow: 0 10px 24px rgba(251, 113, 133, var(--overlay-sc-strength));
 }
 
 .overlay-render-item--system {
@@ -166,6 +175,7 @@ export class OverlayStyleEngine {
   }
 }
 
+${this.settings.overlayCustomCss}
 ${this.customCss}
 `
   }

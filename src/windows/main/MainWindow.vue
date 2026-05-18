@@ -34,6 +34,18 @@
           调试窗口
         </el-button>
         <el-button
+          plain
+          @click="openCrashWindow"
+        >
+          Crash Center
+        </el-button>
+        <el-button
+          plain
+          @click="openOverlayStudio"
+        >
+          Overlay Studio
+        </el-button>
+        <el-button
           type="primary"
           @click="openDanmuWindow"
         >
@@ -438,6 +450,14 @@ async function openLogin(): Promise<void> {
 
 async function openDebug(): Promise<void> {
   await openAppWindow('debug')
+}
+
+async function openCrashWindow(): Promise<void> {
+  await openAppWindow('crash')
+}
+
+async function openOverlayStudio(): Promise<void> {
+  await openAppWindow('overlay-studio')
 }
 
 onMounted(async () => {

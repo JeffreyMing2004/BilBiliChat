@@ -4,6 +4,7 @@ export const PACKET_HEADER_LENGTH = 16
 export const PacketVersion = {
   Json: 0,
   Heartbeat: 1,
+  Zlib: 2,
   Brotli: 3,
 } as const
 

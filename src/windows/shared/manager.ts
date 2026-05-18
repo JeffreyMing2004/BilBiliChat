@@ -7,6 +7,8 @@ export const WINDOW_LABELS: Record<AppWindowLabel, AppWindowLabel> = {
   settings: 'settings',
   login: 'login',
   debug: 'debug',
+  'overlay-studio': 'overlay-studio',
+  crash: 'crash',
 }
 
 export function getCurrentWindowLabel(): AppWindowLabel {

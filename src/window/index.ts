@@ -1,6 +1,7 @@
 import { listen } from '@tauri-apps/api/event'
 import { PhysicalPosition, PhysicalSize, getCurrentWindow } from '@tauri-apps/api/window'
 
+import { crashReporter } from '../core/crash/CrashReporter'
 import { recoveryManager } from '../core/recovery/RecoveryManager'
 import { loadStorageItem, saveStorageItem, windowStateStorageKey } from '../settings'
 import type { AppSettings, WindowStateSnapshot } from '../types/settings'
@@ -17,8 +18,18 @@ export async function restoreWindowState(): Promise<void> {
   const currentWindow = getCurrentWindow()
   const state = loadStorageItem(windowStateStorageKey(currentWindow.label), DEFAULT_WINDOW_STATE)
 
-  await currentWindow.setSize(new PhysicalSize(state.width, state.height))
-  await currentWindow.setPosition(new PhysicalPosition(state.x, state.y))
+  try {
+    await currentWindow.setSize(new PhysicalSize(state.width, state.height))
+    await currentWindow.setPosition(new PhysicalPosition(state.x, state.y))
+  } catch (error) {
+    crashReporter.captureError('window', 'restoreWindowState', error, {
+      fatal: false,
+      metadata: {
+        label: currentWindow.label,
+        state,
+      },
+    })
+  }
 }
 
 export async function initializeWindowState(): Promise<() => void> {
@@ -28,13 +39,22 @@ export async function initializeWindowState(): Promise<() => void> {
   recoveryManager.captureWindow(windowLabel, true)
 
   const saveBounds = async () => {
-    const [size, position] = await Promise.all([currentWindow.outerSize(), currentWindow.outerPosition()])
-    saveStorageItem(windowStateStorageKey(currentWindow.label), {
-      width: size.width,
-      height: size.height,
-      x: position.x,
-      y: position.y,
-    })
+    try {
+      const [size, position] = await Promise.all([currentWindow.outerSize(), currentWindow.outerPosition()])
+      saveStorageItem(windowStateStorageKey(currentWindow.label), {
+        width: size.width,
+        height: size.height,
+        x: position.x,
+        y: position.y,
+      })
+    } catch (error) {
+      crashReporter.captureError('window', 'initializeWindowState.saveBounds', error, {
+        fatal: false,
+        metadata: {
+          label: currentWindow.label,
+        },
+      })
+    }
   }
 
   const unlistenResize = await currentWindow.onResized(() => {
@@ -70,18 +90,30 @@ export async function applyWindowPreferences(settings: AppSettings): Promise<voi
   const currentWindow = getCurrentWindow()
   const windowLabel = getCurrentWindowLabel()
 
-  if (windowLabel === 'danmu') {
-    await currentWindow.setDecorations(false)
-    await currentWindow.setAlwaysOnTop(true)
-    await currentWindow.setSkipTaskbar(true)
-    await currentWindow.setIgnoreCursorEvents(settings.obsMode && settings.clickThrough)
-    return
-  }
+  try {
+    if (windowLabel === 'danmu') {
+      await currentWindow.setDecorations(false)
+      await currentWindow.setAlwaysOnTop(true)
+      await currentWindow.setSkipTaskbar(true)
+      await currentWindow.setIgnoreCursorEvents(settings.obsMode && settings.clickThrough)
+      return
+    }
 
-  await currentWindow.setDecorations(false)
-  await currentWindow.setAlwaysOnTop(settings.alwaysOnTop)
-  await currentWindow.setSkipTaskbar(false)
-  await currentWindow.setIgnoreCursorEvents(false)
+    await currentWindow.setDecorations(false)
+    await currentWindow.setAlwaysOnTop(settings.alwaysOnTop)
+    await currentWindow.setSkipTaskbar(false)
+    await currentWindow.setIgnoreCursorEvents(false)
+  } catch (error) {
+    crashReporter.captureError('window', 'applyWindowPreferences', error, {
+      fatal: false,
+      metadata: {
+        alwaysOnTop: settings.alwaysOnTop,
+        clickThrough: settings.clickThrough,
+        label: currentWindow.label,
+        obsMode: settings.obsMode,
+      },
+    })
+  }
 }
 
 export async function showMainWindow(): Promise<void> {

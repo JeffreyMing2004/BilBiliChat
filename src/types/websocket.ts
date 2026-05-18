@@ -38,6 +38,7 @@ export interface RoomConnectionOptions {
   reconnectInterval: number
   autoReconnect: boolean
   providerKind?: LiveProviderKind
+  openLiveIdentityCode?: string
 }
 
 export interface RoomConnectionState {

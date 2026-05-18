@@ -64,3 +64,17 @@
   --accent-primary: #00ffd6;
   --accent-secondary: #8b5cf6;
 }
+
+[data-theme='bilibili'] {
+  --bg-color: #081018;
+  --bg-overlay:
+    radial-gradient(circle at top left, rgba(0, 174, 236, 0.18), transparent 28%),
+    radial-gradient(circle at top right, rgba(251, 114, 153, 0.18), transparent 26%),
+    linear-gradient(180deg, #081018 0%, #101a28 48%, #0c1522 100%);
+  --panel-color: rgba(15, 24, 40, 0.78);
+  --panel-border: rgba(255, 255, 255, 0.08);
+  --text-primary: #f3f8ff;
+  --text-secondary: #9cb6d3;
+  --accent-primary: #00a1d6;
+  --accent-secondary: #fb7299;
+}

@@ -21,6 +21,7 @@ export interface LiveProviderOptions {
   roomId: number
   reconnectInterval: number
   autoReconnect: boolean
+  openLiveIdentityCode?: string
   onStatus: (payload: LiveProviderStatusPayload) => void
   onPopularity: (popularity: number) => void
   onLatency?: (latency: number) => void

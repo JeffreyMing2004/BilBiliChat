@@ -6,9 +6,11 @@
 import { computed, watch } from 'vue'
 
 import DebugWindow from './windows/debug/DebugWindow.vue'
+import CrashWindow from './windows/crash/CrashWindow.vue'
 import DanmuWindow from './windows/danmu/DanmuWindow.vue'
 import LoginWindow from './windows/login/LoginWindow.vue'
 import MainWindow from './windows/main/MainWindow.vue'
+import OverlayStudioWindow from './windows/overlay-studio/OverlayStudioWindow.vue'
 import SettingsWindow from './windows/settings/SettingsWindow.vue'
 import { useSettingsStore } from './stores/settings'
 import { getCurrentWindowLabel } from './windows/shared/manager'
@@ -41,6 +43,14 @@ const currentWindowComponent = computed(() => {
 
   if (label === 'debug') {
     return DebugWindow
+  }
+
+  if (label === 'crash') {
+    return CrashWindow
+  }
+
+  if (label === 'overlay-studio') {
+    return OverlayStudioWindow
   }
 
   return MainWindow

@@ -16,11 +16,50 @@
     <div class="settings-group">
       <h3>显示与窗口</h3>
       <div class="settings-item">
-        <span>深色主题</span>
-        <el-tag effect="dark">
-          {{ settingsStore.settings.theme === 'dark' ? 'Dark' : settingsStore.settings.theme }}
-        </el-tag>
+        <span>主题预设</span>
+        <el-radio-group
+          :model-value="settingsStore.settings.theme"
+          @change="patch({ theme: $event })"
+        >
+          <el-radio-button label="dark">
+            Dark
+          </el-radio-button>
+          <el-radio-button label="obs">
+            OBS
+          </el-radio-button>
+          <el-radio-button label="neon">
+            Neon
+          </el-radio-button>
+          <el-radio-button label="bilibili">
+            Bilibili
+          </el-radio-button>
+        </el-radio-group>
       </div>
+      <div class="settings-item">
+        <span>直播连接源</span>
+        <el-radio-group
+          :model-value="settingsStore.settings.liveProvider"
+          @change="patch({ liveProvider: $event })"
+        >
+          <el-radio-button label="public">
+            Public WS
+          </el-radio-button>
+          <el-radio-button label="open-live">
+            OpenLive
+          </el-radio-button>
+        </el-radio-group>
+      </div>
+      <label
+        v-if="settingsStore.settings.liveProvider === 'open-live'"
+        class="textarea-item"
+      >
+        <span>OpenLive 官方身份码</span>
+        <el-input
+          :model-value="settingsStore.settings.openLiveIdentityCode"
+          placeholder="输入 Bilibili OpenLive 身份码"
+          @update:model-value="patch({ openLiveIdentityCode: String($event) })"
+        />
+      </label>
       <div class="settings-item">
         <span>OBS 模式</span>
         <el-switch
@@ -55,6 +94,14 @@
           :model-value="settingsStore.settings.minimizeToTray"
           @change="patch({ minimizeToTray: Boolean($event) })"
         />
+      </div>
+      <div class="settings-actions">
+        <el-button
+          plain
+          @click="openOverlayStudio"
+        >
+          打开 Overlay Studio
+        </el-button>
       </div>
     </div>
 
@@ -99,6 +146,24 @@
         />
       </label>
       <label class="slider-item">
+        <span>X 偏移 {{ settingsStore.settings.overlayOffsetX }}px</span>
+        <el-slider
+          :model-value="settingsStore.settings.overlayOffsetX"
+          :min="0"
+          :max="1600"
+          @update:model-value="patch({ overlayOffsetX: Number($event) })"
+        />
+      </label>
+      <label class="slider-item">
+        <span>Y 偏移 {{ settingsStore.settings.overlayOffsetY }}px</span>
+        <el-slider
+          :model-value="settingsStore.settings.overlayOffsetY"
+          :min="0"
+          :max="900"
+          @update:model-value="patch({ overlayOffsetY: Number($event) })"
+        />
+      </label>
+      <label class="slider-item">
         <span>弹幕间距 {{ settingsStore.settings.messageSpacing }}px</span>
         <el-slider
           :model-value="settingsStore.settings.messageSpacing"
@@ -115,6 +180,42 @@
           :max="1.8"
           :step="0.1"
           @update:model-value="patch({ animationSpeed: Number($event) })"
+        />
+      </label>
+      <label class="slider-item">
+        <span>阴影模糊 {{ settingsStore.settings.overlayShadowBlur }}px</span>
+        <el-slider
+          :model-value="settingsStore.settings.overlayShadowBlur"
+          :min="0"
+          :max="48"
+          @update:model-value="patch({ overlayShadowBlur: Number($event) })"
+        />
+      </label>
+      <label class="slider-item">
+        <span>阴影透明度 {{ settingsStore.settings.overlayShadowOpacity }}%</span>
+        <el-slider
+          :model-value="settingsStore.settings.overlayShadowOpacity"
+          :min="0"
+          :max="100"
+          @update:model-value="patch({ overlayShadowOpacity: Number($event) })"
+        />
+      </label>
+      <label class="slider-item">
+        <span>礼物高亮 {{ settingsStore.settings.giftAccentStrength }}%</span>
+        <el-slider
+          :model-value="settingsStore.settings.giftAccentStrength"
+          :min="0"
+          :max="100"
+          @update:model-value="patch({ giftAccentStrength: Number($event) })"
+        />
+      </label>
+      <label class="slider-item">
+        <span>SC 高亮 {{ settingsStore.settings.superChatAccentStrength }}%</span>
+        <el-slider
+          :model-value="settingsStore.settings.superChatAccentStrength"
+          :min="0"
+          :max="100"
+          @update:model-value="patch({ superChatAccentStrength: Number($event) })"
         />
       </label>
       <div class="settings-item">
@@ -274,6 +375,23 @@
         />
       </div>
       <div class="settings-item">
+        <span>更新渠道</span>
+        <el-radio-group
+          :model-value="settingsStore.settings.updateChannel"
+          @change="changeUpdateChannel"
+        >
+          <el-radio-button label="stable">
+            Stable
+          </el-radio-button>
+          <el-radio-button label="beta">
+            Beta
+          </el-radio-button>
+          <el-radio-button label="nightly">
+            Nightly
+          </el-radio-button>
+        </el-radio-group>
+      </div>
+      <div class="settings-item">
         <span>当前版本</span>
         <strong>{{ updaterState.currentVersion }}</strong>
       </div>
@@ -310,6 +428,21 @@
         >
           下载并安装
         </el-button>
+        <el-button
+          plain
+          :loading="updaterState.downloading"
+          :disabled="!updaterState.availableVersion || updaterState.downloaded"
+          @click="downloadUpdate"
+        >
+          后台下载
+        </el-button>
+        <el-button
+          plain
+          :disabled="!updaterState.downloaded"
+          @click="installDownloaded"
+        >
+          安装已下载更新
+        </el-button>
         <span v-if="updaterState.installing">进度 {{ updaterState.progress }}%</span>
       </div>
     </div>
@@ -337,17 +470,49 @@
         </el-button>
       </div>
     </div>
+
+    <div class="settings-group">
+      <h3>配置同步</h3>
+      <p class="settings-helper">
+        支持导出完整 JSON 配置，包含 Overlay、更新渠道和插件启用状态。
+      </p>
+      <div class="settings-actions">
+        <el-button
+          plain
+          @click="exportConfig"
+        >
+          导出配置 JSON
+        </el-button>
+        <el-button
+          type="primary"
+          plain
+          @click="importConfig"
+        >
+          导入配置 JSON
+        </el-button>
+      </div>
+    </div>
   </section>
 </template>
 
 <script setup lang="ts">
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 
 import { exportRoomMessagesAsJson, exportRoomMessagesAsTxt } from '../export'
-import { checkForAppUpdates, downloadAndInstallUpdate, updaterState } from '../modules/updater'
+import { pluginManager } from '../core/plugins/PluginManager'
+import { importProductConfig, exportProductConfig } from '../modules/sync'
+import {
+  checkForAppUpdates,
+  downloadAndInstallUpdate,
+  downloadUpdatePackage,
+  installDownloadedUpdate,
+  setUpdateChannel,
+  updaterState,
+} from '../modules/updater'
 import { useDanmuStore } from '../stores/danmu'
 import { useSettingsStore } from '../stores/settings'
 import type { AppSettings } from '../types/settings'
+import { openAppWindow } from '../windows/shared/manager'
 
 withDefaults(defineProps<{
   title?: string
@@ -381,8 +546,13 @@ function exportJson(): void {
 }
 
 async function checkUpdates(): Promise<void> {
-  const available = await checkForAppUpdates()
+  const available = await checkForAppUpdates(settingsStore.settings.updateChannel)
   ElMessage.success(available ? '发现新版本' : '当前已经是最新版本')
+}
+
+function changeUpdateChannel(channel: AppSettings['updateChannel']): void {
+  patch({ updateChannel: channel })
+  setUpdateChannel(channel)
 }
 
 async function installUpdate(): Promise<void> {
@@ -390,5 +560,48 @@ async function installUpdate(): Promise<void> {
   if (!completed && updaterState.lastError) {
     ElMessage.error(updaterState.lastError)
   }
+}
+
+async function downloadUpdate(): Promise<void> {
+  const completed = await downloadUpdatePackage()
+  if (completed) {
+    ElMessage.success('更新包已在后台下载完成')
+  } else if (updaterState.lastError) {
+    ElMessage.error(updaterState.lastError)
+  }
+}
+
+async function installDownloaded(): Promise<void> {
+  const completed = await installDownloadedUpdate()
+  if (!completed && updaterState.lastError) {
+    ElMessage.error(updaterState.lastError)
+  }
+}
+
+async function openOverlayStudio(): Promise<void> {
+  await openAppWindow('overlay-studio')
+}
+
+async function exportConfig(): Promise<void> {
+  const enabledPluginIds = pluginManager.getState().filter((plugin) => plugin.enabled).map((plugin) => plugin.id)
+  const content = exportProductConfig(settingsStore.settings, enabledPluginIds)
+
+  await ElMessageBox.alert(content, '配置导出 JSON', {
+    confirmButtonText: '关闭',
+    dangerouslyUseHTMLString: false,
+  })
+}
+
+async function importConfig(): Promise<void> {
+  const { value } = await ElMessageBox.prompt('粘贴配置 JSON', '配置导入', {
+    inputType: 'textarea',
+    inputPlaceholder: '{ "version": 1, ... }',
+    confirmButtonText: '导入',
+    cancelButtonText: '取消',
+  })
+
+  const snapshot = importProductConfig(value)
+  settingsStore.patchSettings(snapshot.settings)
+  ElMessage.success(`配置已导入，插件启用数量 ${snapshot.plugins.enabledIds.length}`)
 }
 </script>

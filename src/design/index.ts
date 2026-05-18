@@ -1,4 +1,4 @@
-export type DesignThemeName = 'dark' | 'obs' | 'neon'
+export type DesignThemeName = 'dark' | 'obs' | 'neon' | 'bilibili'
 
 export interface DesignThemeTokens {
   background: string
@@ -108,5 +108,19 @@ export const DESIGN_THEMES: Record<DesignThemeName, DesignThemeTokens> = {
     success: '#22c55e',
     warning: '#fbbf24',
     danger: '#fb7185',
+  },
+  bilibili: {
+    background: '#081018',
+    backgroundOverlay:
+      'radial-gradient(circle at top left, rgba(0, 174, 236, 0.18), transparent 28%), radial-gradient(circle at top right, rgba(251, 114, 153, 0.18), transparent 26%), linear-gradient(180deg, #081018 0%, #101a28 48%, #0c1522 100%)',
+    panel: 'rgba(15, 24, 40, 0.78)',
+    panelBorder: 'rgba(255, 255, 255, 0.08)',
+    textPrimary: '#f3f8ff',
+    textSecondary: '#9cb6d3',
+    accent: '#00a1d6',
+    accentSecondary: '#fb7299',
+    success: '#22c55e',
+    warning: '#f59e0b',
+    danger: '#ef4444',
   },
 }

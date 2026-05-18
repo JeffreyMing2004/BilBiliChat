@@ -16,6 +16,7 @@ export type LogScope =
   | 'live'
   | 'recovery'
   | 'design'
+  | 'crash'
 
 export interface LogRecord {
   id: string

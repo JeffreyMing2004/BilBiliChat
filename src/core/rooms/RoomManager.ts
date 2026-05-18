@@ -437,6 +437,8 @@ export class RoomManager {
         roomId: resolvedRoomId,
         reconnectInterval: 5,
         autoReconnect: this.settings.autoReconnect,
+        providerKind: this.settings.liveProvider,
+        openLiveIdentityCode: this.settings.openLiveIdentityCode,
       })
 
       logInfo('rooms', `房间 ${inputRoomId} 连接流程已交给 ConnectionManager`)

@@ -1,14 +1,26 @@
-export type ThemeMode = 'dark' | 'obs' | 'neon'
+import type { LiveProviderKind } from './live'
+
+export type ThemeMode = 'dark' | 'obs' | 'neon' | 'bilibili'
 export type MessageDirection = 'bottom-up' | 'top-down'
+export type UpdateChannel = 'stable' | 'beta' | 'nightly'
 
 export interface AppSettings {
   theme: ThemeMode
+  liveProvider: LiveProviderKind
+  openLiveIdentityCode: string
   obsMode: boolean
   autoReconnect: boolean
   fontSize: number
   fontWeight: number
   strokeWidth: number
   overlayOpacity: number
+  overlayOffsetX: number
+  overlayOffsetY: number
+  overlayShadowBlur: number
+  overlayShadowOpacity: number
+  overlayCustomCss: string
+  giftAccentStrength: number
+  superChatAccentStrength: number
   maxMessages: number
   animationsEnabled: boolean
   soundEnabled: boolean
@@ -21,6 +33,7 @@ export interface AppSettings {
   minimizeToTray: boolean
   updaterEnabled: boolean
   autoCheckUpdates: boolean
+  updateChannel: UpdateChannel
   hideGift: boolean
   hideEntry: boolean
   hideSystem: boolean

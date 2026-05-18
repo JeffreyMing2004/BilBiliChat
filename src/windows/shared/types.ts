@@ -1,7 +1,7 @@
 import type { LiveMessage } from '../../types/message'
 import type { RoomSessionState } from '../../types/room'
 
-export type AppWindowLabel = 'main' | 'danmu' | 'settings' | 'login' | 'debug'
+export type AppWindowLabel = 'main' | 'danmu' | 'settings' | 'login' | 'debug' | 'overlay-studio' | 'crash'
 export type OpenableWindowKind = Exclude<AppWindowLabel, 'main'>
 
 export interface RoomSyncSnapshot {

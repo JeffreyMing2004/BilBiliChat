@@ -15,7 +15,18 @@ function getBrotliDecoder(): Promise<BrotliDecoderModule> {
   return brotliDecoderPromise
 }
 
+async function decompressDeflate(body: Uint8Array): Promise<Uint8Array> {
+  const stream = new Blob([bodyToArrayBuffer(body)]).stream().pipeThrough(new DecompressionStream('deflate'))
+  const buffer = await new Response(stream).arrayBuffer()
+  return new Uint8Array(buffer)
+}
+
 async function expandFrame(frame: PacketFrame): Promise<PacketFrame[]> {
+  if (frame.header.version === PacketVersion.Zlib) {
+    const decompressed = await decompressDeflate(frame.body)
+    return decodePacketFrames(bodyToArrayBuffer(decompressed))
+  }
+
   if (frame.header.version !== PacketVersion.Brotli) {
     return [frame]
   }

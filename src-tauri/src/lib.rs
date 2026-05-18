@@ -12,6 +12,8 @@ fn ensure_app_window(app: &AppHandle, kind: &str) -> tauri::Result<()> {
     "settings" => ("settings", "LiveDanmu - SettingsWindow"),
     "login" => ("login", "LiveDanmu - LoginWindow"),
     "debug" => ("debug", "LiveDanmu - DebugWindow"),
+    "crash" => ("crash", "LiveDanmu - CrashWindow"),
+    "overlay-studio" => ("overlay-studio", "LiveDanmu - OverlayStudioWindow"),
     _ => ("main", "LiveDanmu"),
   };
 
@@ -55,6 +57,18 @@ fn ensure_app_window(app: &AppHandle, kind: &str) -> tauri::Result<()> {
     "debug" => builder
       .inner_size(760.0, 540.0)
       .min_inner_size(680.0, 480.0)
+      .transparent(true)
+      .decorations(false)
+      .resizable(true),
+    "crash" => builder
+      .inner_size(1120.0, 760.0)
+      .min_inner_size(920.0, 620.0)
+      .transparent(true)
+      .decorations(false)
+      .resizable(true),
+    "overlay-studio" => builder
+      .inner_size(1440.0, 900.0)
+      .min_inner_size(1180.0, 760.0)
       .transparent(true)
       .decorations(false)
       .resizable(true),
@@ -110,7 +124,7 @@ fn setup_window_lifecycle_selftest(app: &tauri::App) {
   std::thread::spawn(move || {
     use std::time::Duration;
 
-    for kind in ["debug", "login", "settings", "danmu"] {
+    for kind in ["debug", "login", "settings", "danmu", "overlay-studio", "crash"] {
       std::thread::sleep(Duration::from_millis(900));
 
       if let Err(error) = ensure_app_window(&app_handle, kind) {

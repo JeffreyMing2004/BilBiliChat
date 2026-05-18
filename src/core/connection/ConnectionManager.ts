@@ -1,4 +1,5 @@
 import { eventBus } from '../events/EventBus'
+import { reportWebSocketCrash } from '../crash/CrashReporter'
 import { logDebug, logInfo, logWarn } from '../logger/Logger'
 import { createLiveProvider } from '../live'
 import { performanceMonitor } from '../performance/PerformanceMonitor'
@@ -35,6 +36,7 @@ export class ConnectionManager {
         roomId: options.roomId,
         reconnectInterval: options.reconnectInterval,
         autoReconnect: options.autoReconnect,
+        openLiveIdentityCode: options.openLiveIdentityCode,
         onStatus: (payload) => {
           Object.assign(connectionState, payload)
           performanceMonitor.updateConnectionStatus(payload.status)
@@ -104,7 +106,17 @@ export class ConnectionManager {
 
     this.sessions.set(roomKey, session)
     logInfo('connection', `ConnectionManager connect ${roomKey}`)
-    await session.provider.connect()
+    try {
+      await session.provider.connect()
+    } catch (error) {
+      reportWebSocketCrash('ConnectionManager.connect', error, {
+        providerKind: options.providerKind ?? 'public',
+        roomId: options.roomId,
+        roomKey,
+      })
+      this.sessions.delete(roomKey)
+      throw error
+    }
   }
 
   disconnect(roomKey: string): void {
