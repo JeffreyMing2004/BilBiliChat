@@ -24,6 +24,13 @@ fn ensure_app_window(app: &AppHandle, kind: &str) -> tauri::Result<()> {
     .title(title)
     .visible(true);
 
+  #[cfg(target_os = "macos")]
+  let builder = if cfg!(debug_assertions) {
+    builder.incognito(true)
+  } else {
+    builder
+  };
+
   let builder = match kind {
     "danmu" => builder
       .inner_size(1080.0, 760.0)
@@ -74,6 +81,53 @@ fn open_app_window(app: AppHandle, kind: String) -> Result<(), String> {
 #[tauri::command]
 fn broadcast_window_event(app: AppHandle, event: String, payload: serde_json::Value) -> Result<(), String> {
   app.emit(event.as_str(), payload).map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+fn close_app_window(app: AppHandle, label: String) -> Result<(), String> {
+  if label == "main" {
+    if let Some(window) = app.get_webview_window("main") {
+      window.hide().map_err(|error| error.to_string())?;
+      return Ok(());
+    }
+    return Err("主窗口不存在".into());
+  }
+
+  let window = app
+    .get_webview_window(&label)
+    .ok_or_else(|| format!("窗口不存在: {label}"))?;
+
+  window.close().map_err(|error| error.to_string())
+}
+
+#[cfg(debug_assertions)]
+fn setup_window_lifecycle_selftest(app: &tauri::App) {
+  if std::env::var("BILBILICHAT_SELFTEST_WINDOWS").ok().as_deref() != Some("1") {
+    return;
+  }
+
+  let app_handle = app.handle().clone();
+  std::thread::spawn(move || {
+    use std::time::Duration;
+
+    for kind in ["debug", "login", "settings", "danmu"] {
+      std::thread::sleep(Duration::from_millis(900));
+
+      if let Err(error) = ensure_app_window(&app_handle, kind) {
+        log::error!("window selftest open {kind} failed: {error}");
+        continue;
+      }
+      log::info!("window selftest opened {kind}");
+
+      std::thread::sleep(Duration::from_millis(800));
+
+      if let Err(error) = close_app_window(app_handle.clone(), kind.to_string()) {
+        log::error!("window selftest close {kind} failed: {error}");
+      } else {
+        log::info!("window selftest closed {kind}");
+      }
+    }
+  });
 }
 
 #[cfg(desktop)]
@@ -156,10 +210,18 @@ pub fn run() {
   }
 
   builder
-    .invoke_handler(tauri::generate_handler![open_app_window, broadcast_window_event])
+    .invoke_handler(tauri::generate_handler![
+      open_app_window,
+      close_app_window,
+      broadcast_window_event
+    ])
     .setup(|app| {
       #[cfg(desktop)]
-      setup_tray(app)?;
+      {
+        setup_tray(app)?;
+        #[cfg(debug_assertions)]
+        setup_window_lifecycle_selftest(app);
+      }
 
       Ok(())
     })

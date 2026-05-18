@@ -27,7 +27,7 @@ export class WindowBridge {
   }
 
   async closeCurrentWindow(): Promise<void> {
-    await getCurrentWindow().close()
+    await invoke('close_app_window', { label: this.getCurrentWindowLabel() })
   }
 
   async broadcast<T>(event: string, payload: T): Promise<void> {
