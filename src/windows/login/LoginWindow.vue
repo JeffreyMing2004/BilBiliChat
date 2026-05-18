@@ -87,7 +87,9 @@
 
 <script setup lang="ts">
 import { computed, onMounted } from 'vue'
+import { ElMessage } from 'element-plus'
 
+import { logError } from '../../core/logger/Logger'
 import { useAuthStore } from '../../stores/auth'
 import { closeCurrentWindow } from '../shared/manager'
 
@@ -113,7 +115,13 @@ function formatCount(value: number): string {
 }
 
 async function closeWindow(): Promise<void> {
-  await closeCurrentWindow()
+  try {
+    await closeCurrentWindow()
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '关闭登录窗口失败'
+    logError('windows', message)
+    ElMessage.error(message)
+  }
 }
 
 onMounted(async () => {

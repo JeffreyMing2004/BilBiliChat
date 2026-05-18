@@ -72,7 +72,9 @@
 
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, reactive } from 'vue'
+import { ElMessage } from 'element-plus'
 
+import { logError } from '../../core/logger/Logger'
 import { performanceMonitor } from '../../core/performance/PerformanceMonitor'
 import { useDanmuStore } from '../../stores/danmu'
 import { useSettingsStore } from '../../stores/settings'
@@ -84,7 +86,13 @@ const snapshot = reactive(performanceMonitor.getSnapshot())
 let unlisten: (() => void) | null = null
 
 async function closeWindow(): Promise<void> {
-  await closeCurrentWindow()
+  try {
+    await closeCurrentWindow()
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '关闭调试窗口失败'
+    logError('windows', message)
+    ElMessage.error(message)
+  }
 }
 
 onMounted(async () => {

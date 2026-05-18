@@ -18,8 +18,10 @@
 
 <script setup lang="ts">
 import { onMounted } from 'vue'
+import { ElMessage } from 'element-plus'
 import { getVersion } from '@tauri-apps/api/app'
 
+import { logError } from '../../core/logger/Logger'
 import SettingsPanel from '../../components/SettingsPanel.vue'
 import { initializeUpdater } from '../../modules/updater'
 import { useAuthStore } from '../../stores/auth'
@@ -32,7 +34,13 @@ const store = useDanmuStore()
 const settingsStore = useSettingsStore()
 
 async function closeWindow(): Promise<void> {
-  await closeCurrentWindow()
+  try {
+    await closeCurrentWindow()
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '关闭设置窗口失败'
+    logError('windows', message)
+    ElMessage.error(message)
+  }
 }
 
 onMounted(async () => {

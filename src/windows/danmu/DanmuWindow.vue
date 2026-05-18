@@ -79,8 +79,10 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { ElMessage } from 'element-plus'
 
 import { OverlayStyleEngine } from '../../core/overlay/css/OverlayStyleEngine'
+import { logError } from '../../core/logger/Logger'
 import { OverlayRenderer } from '../../core/overlay/renderer/OverlayRenderer'
 import { performanceMonitor } from '../../core/performance/PerformanceMonitor'
 import { recoveryManager } from '../../core/recovery/RecoveryManager'
@@ -132,7 +134,13 @@ function toggleObs(): void {
 }
 
 async function closeWindow(): Promise<void> {
-  await closeCurrentWindow()
+  try {
+    await closeCurrentWindow()
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '关闭弹幕窗口失败'
+    logError('windows', message)
+    ElMessage.error(message)
+  }
 }
 
 function syncPerformanceState(): void {
