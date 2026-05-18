@@ -28,6 +28,8 @@ export interface LogRecord {
 
 type LogListener = (record: LogRecord) => void
 
+const shouldPrintLogs = import.meta.env.DEV
+
 class Logger {
   private readonly listeners = new Set<LogListener>()
 
@@ -40,18 +42,22 @@ class Logger {
       time: formatTime(),
     }
 
-    const prefix = `[LiveDanmu][${scope}][${level}]`
-    if (level === 'error') {
-      console.error(prefix, message)
-    } else if (level === 'warn') {
-      console.warn(prefix, message)
-    } else if (level === 'debug') {
-      console.debug(prefix, message)
-    } else {
-      console.info(prefix, message)
+    if (shouldPrintLogs) {
+      const prefix = `[LiveDanmu][${scope}][${level}]`
+      if (level === 'error') {
+        console.error(prefix, message)
+      } else if (level === 'warn') {
+        console.warn(prefix, message)
+      } else if (level === 'debug') {
+        console.debug(prefix, message)
+      } else {
+        console.info(prefix, message)
+      }
     }
 
-    this.listeners.forEach((listener) => listener(record))
+    if (shouldPrintLogs) {
+      this.listeners.forEach((listener) => listener(record))
+    }
     return record
   }
 

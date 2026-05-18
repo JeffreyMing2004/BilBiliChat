@@ -259,6 +259,11 @@ fn setup_tray(app: &tauri::App) -> tauri::Result<()> {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   let mut builder = tauri::Builder::default();
+  let log_level = if cfg!(debug_assertions) {
+    log::LevelFilter::Info
+  } else {
+    log::LevelFilter::Off
+  };
 
   #[cfg(desktop)]
   {
@@ -297,7 +302,7 @@ pub fn run() {
     })
     .plugin(
       tauri_plugin_log::Builder::default()
-        .level(log::LevelFilter::Info)
+        .level(log_level)
         .build(),
     )
     .plugin(tauri_plugin_store::Builder::default().build())

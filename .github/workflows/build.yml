@@ -2,8 +2,13 @@ name: build-and-release
 
 on:
   push:
+    branches:
+      - "**"
     tags:
       - "v*"
+  pull_request:
+    branches:
+      - "**"
   workflow_dispatch:
     inputs:
       version:
@@ -19,7 +24,43 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  ci-compile:
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - ubuntu-latest
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install Rust Stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust Artifacts
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: "./src-tauri -> target"
+
+      - name: Install Frontend Dependencies
+        run: npm install
+
+      - name: Lint Frontend
+        run: npm run lint
+
+      - name: Build Frontend
+        run: npm run build
+
   prepare-release:
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.meta.outputs.version }}
@@ -81,6 +122,7 @@ jobs:
           git push origin "$RELEASE_TAG"
 
   build-tauri:
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
     needs: prepare-release
     strategy:
       fail-fast: false
@@ -165,6 +207,7 @@ jobs:
           args: ${{ matrix.args }}
 
   publish-release-assets:
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
     needs:
       - prepare-release
       - build-tauri
