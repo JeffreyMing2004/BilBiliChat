@@ -1,8 +1,8 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "LiveDanmu",
+  "productName": "BilBiliChat",
   "version": "0.1.0",
-  "identifier": "com.livedanmu.desktop",
+  "identifier": "com.ming.bilbilichat",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:1420",
@@ -14,7 +14,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "LiveDanmu",
+        "title": "BilBiliChat",
         "width": 1440,
         "height": 900,
         "minWidth": 1100,
@@ -35,8 +35,8 @@
   "bundle": {
     "active": true,
     "category": "Utility",
-    "copyright": "LiveDanmu",
-    "targets": ["dmg", "nsis"],
+    "copyright": "BilBiliChat",
+    "targets": ["dmg", "app", "nsis", "msi"],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
