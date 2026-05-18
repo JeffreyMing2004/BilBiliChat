@@ -1,3 +1,5 @@
+import type { LiveMessage } from './message'
+
 export type ConnectionStatus =
   | 'idle'
   | 'connecting'
@@ -5,19 +7,6 @@ export type ConnectionStatus =
   | 'reconnecting'
   | 'disconnected'
   | 'error'
-
-export type DanmuMessageType = 'danmu' | 'gift' | 'superChat' | 'entry' | 'system'
-
-export interface DanmuMessageItem {
-  id: string
-  type: DanmuMessageType
-  username: string
-  content: string
-  summary: string
-  timestamp: string
-  rawCommand: string
-  price?: number
-}
 
 export interface DanmuConfig {
   roomId: string
@@ -34,6 +23,8 @@ export interface StatusSnapshot {
   popularity: number
   reconnectCount: number
   lastError: string
+  messageCount: number
+  autoScrollEnabled: boolean
 }
 
 export interface RawDanmuCommand {
@@ -45,3 +36,11 @@ export interface RawDanmuCommand {
 export interface AuthReplyPayload {
   code?: number
 }
+
+export interface ReconnectNotice {
+  reconnectCount: number
+  reconnectInSeconds: number
+  reason: string
+}
+
+export type DanmuMessageItem = LiveMessage

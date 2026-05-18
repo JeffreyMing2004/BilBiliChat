@@ -1,4 +1,5 @@
-import type { AuthReplyPayload, DanmuMessageItem, RawDanmuCommand } from '../types/danmu'
+import type { AuthReplyPayload, DanmuMessageItem, RawDanmuCommand, ReconnectNotice } from '../types/danmu'
+import { logError, logInfo, logSuccess, logWarning } from '../utils/logger'
 import { decodePacketFrames } from './decoder'
 import { createHeartbeatPacket, HEARTBEAT_INTERVAL_MS } from './heartbeat'
 import {
@@ -26,6 +27,7 @@ interface LiveDanmuSocketOptions {
   onPopularity: (popularity: number) => void
   onMessage: (message: DanmuMessageItem) => void
   onRawCommand?: (payload: RawDanmuCommand) => void
+  onReconnectScheduled?: (notice: ReconnectNotice) => void
 }
 
 function readyStateText(socket: WebSocket | null): string {
@@ -85,6 +87,7 @@ export class LiveDanmuSocket {
       this.socket = null
     }
 
+    logInfo('websocket', '连接已手动断开')
     this.emitStatus('disconnected', '已断开连接')
   }
 
@@ -93,6 +96,7 @@ export class LiveDanmuSocket {
     this.socket = new WebSocket(BILIBILI_WEBSOCKET_URL)
     this.socket.binaryType = 'arraybuffer'
 
+    logInfo('connection', `开始连接直播间 ${this.options.roomId}`)
     this.emitStatus(
       status,
       status === 'reconnecting' ? `正在重连，第 ${this.reconnectCount} 次` : '正在连接 WebSocket',
@@ -104,6 +108,7 @@ export class LiveDanmuSocket {
       }
 
       this.socket.send(createAuthPacket(this.options.roomId))
+      logInfo('websocket', 'WebSocket 已连接，认证包已发送')
       this.emitStatus(status, 'WebSocket 已连接，正在发送认证包')
       this.startAuthTimeout()
     }
@@ -118,6 +123,7 @@ export class LiveDanmuSocket {
     }
 
     this.socket.onerror = () => {
+      logError('websocket', 'WebSocket 连接异常')
       this.emitStatus('error', 'WebSocket 连接异常', 'WebSocket 连接异常')
     }
 
@@ -130,6 +136,7 @@ export class LiveDanmuSocket {
         return
       }
 
+      logWarning('websocket', '连接断开，准备自动重连')
       this.rejectPendingConnect('连接已关闭')
       this.scheduleReconnect('连接断开，准备自动重连')
     }
@@ -142,7 +149,6 @@ export class LiveDanmuSocket {
         break
       case PacketOperation.HeartbeatReply:
         this.options.onPopularity(readPopularity(frame.body))
-        this.emitStatus('connected', '连接正常')
         break
       case PacketOperation.Message:
         await this.handleMessageFrame(frame)
@@ -166,6 +172,7 @@ export class LiveDanmuSocket {
 
     if (payload.code && payload.code !== 0) {
       const error = `认证失败，返回码 ${payload.code}`
+      logError('connection', error)
       this.rejectPendingConnect(error)
       this.emitStatus('error', error, error)
       return
@@ -175,6 +182,7 @@ export class LiveDanmuSocket {
     this.reconnectCount = 0
     this.clearAuthTimeoutTimer()
     this.startHeartbeat()
+    logSuccess('connection', '认证成功，开始接收弹幕')
     this.emitStatus('connected', '认证成功，开始接收弹幕')
 
     if (this.connectResolve) {
@@ -212,6 +220,7 @@ export class LiveDanmuSocket {
     this.authTimeoutTimer = window.setTimeout(() => {
       if (!this.isAuthenticated) {
         const error = '认证超时'
+        logError('connection', error)
         this.rejectPendingConnect(error)
         this.emitStatus('error', error, error)
         this.socket?.close()
@@ -223,6 +232,11 @@ export class LiveDanmuSocket {
     this.clearReconnectTimer()
     this.reconnectCount += 1
     this.emitStatus('reconnecting', reason)
+    this.options.onReconnectScheduled?.({
+      reconnectCount: this.reconnectCount,
+      reconnectInSeconds: this.options.reconnectInterval,
+      reason,
+    })
 
     this.reconnectTimer = window.setTimeout(() => {
       this.openSocket('reconnecting')

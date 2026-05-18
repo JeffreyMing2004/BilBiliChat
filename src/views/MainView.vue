@@ -1,17 +1,17 @@
 <template>
   <div class="app-shell">
-    <ConnectionPanel />
+    <RoomConnect />
     <DanmuList />
-    <AppFooter :status="store.status" />
+    <StatusBar />
   </div>
 </template>
 
 <script setup lang="ts">
 import { onMounted } from 'vue'
 
-import AppFooter from '../components/AppFooter.vue'
-import ConnectionPanel from '../components/ConnectionPanel.vue'
 import DanmuList from '../components/DanmuList.vue'
+import RoomConnect from '../components/RoomConnect.vue'
+import StatusBar from '../components/StatusBar.vue'
 import { useDanmuStore } from '../stores/danmu'
 
 const store = useDanmuStore()

@@ -1,17 +1,26 @@
 <template>
-  <section class="panel danmu-panel">
+  <section class="danmu-panel glass-panel">
     <div class="panel-head">
       <div>
-        <h2>实时弹幕</h2>
-        <p>收到 {{ store.messages.length }} 条消息</p>
+        <h2>实时互动流</h2>
+        <p>普通弹幕、礼物、SC 与系统消息统一展示</p>
       </div>
 
-      <el-button
-        size="small"
-        @click="store.clearMessages()"
-      >
-        清空
-      </el-button>
+      <div class="panel-actions">
+        <el-tag
+          v-if="store.isAutoScrollPaused"
+          type="warning"
+          effect="dark"
+        >
+          已暂停自动滚动
+        </el-tag>
+        <el-button
+          size="small"
+          @click="store.clearMessages()"
+        >
+          清空
+        </el-button>
+      </div>
     </div>
 
     <div
@@ -23,33 +32,48 @@
         v-if="store.messages.length === 0"
         class="empty-state"
       >
-        点击连接后，这里会实时显示弹幕、礼物、SC 和进入直播间事件。
+        连接直播间后，这里会实时显示弹幕、礼物、SC 和系统互动消息。
       </div>
 
       <transition-group
-        name="danmu-slide"
+        name="message-fade"
         tag="div"
         class="danmu-items"
       >
-        <article
-          v-for="item in store.messages"
-          :key="item.id"
-          class="danmu-item"
-          :data-type="item.type"
+        <template
+          v-for="message in store.messages"
+          :key="message.id"
         >
-          <div class="danmu-item-head">
-            <span class="danmu-time">{{ item.timestamp }}</span>
-            <el-tag
-              size="small"
-              effect="plain"
-            >
-              {{ item.rawCommand }}
-            </el-tag>
-          </div>
-          <pre class="danmu-text">{{ item.summary }}</pre>
-        </article>
+          <GiftItem
+            v-if="message.type === 'gift'"
+            :message="message"
+          />
+          <SCItem
+            v-else-if="message.type === 'superChat'"
+            :message="message"
+          />
+          <SystemMessage
+            v-else-if="message.type === 'system'"
+            :message="message"
+          />
+          <DanmuItem
+            v-else
+            :message="message"
+          />
+        </template>
       </transition-group>
     </div>
+
+    <transition name="dock-fade">
+      <button
+        v-if="store.isAutoScrollPaused"
+        class="jump-bottom"
+        type="button"
+        @click="resumeAutoScroll"
+      >
+        回到底部
+      </button>
+    </transition>
   </section>
 </template>
 
@@ -57,10 +81,13 @@
 import { nextTick, ref, watch } from 'vue'
 
 import { useDanmuStore } from '../stores/danmu'
+import DanmuItem from './DanmuItem.vue'
+import GiftItem from './GiftItem.vue'
+import SCItem from './SCItem.vue'
+import SystemMessage from './SystemMessage.vue'
 
 const store = useDanmuStore()
 const listRef = ref<HTMLElement | null>(null)
-const shouldStickBottom = ref(true)
 
 function scrollToBottom(force = false): void {
   const element = listRef.value
@@ -71,10 +98,10 @@ function scrollToBottom(force = false): void {
 
   const distance = element.scrollHeight - element.scrollTop - element.clientHeight
 
-  if (force || shouldStickBottom.value || distance < 50) {
+  if (force || store.status.autoScrollEnabled || distance < 48) {
     element.scrollTo({
       top: element.scrollHeight,
-      behavior: 'smooth',
+      behavior: force ? 'smooth' : 'auto',
     })
   }
 }
@@ -86,7 +113,13 @@ function handleScroll(): void {
     return
   }
 
-  shouldStickBottom.value = element.scrollHeight - element.scrollTop - element.clientHeight < 40
+  const nearBottom = element.scrollHeight - element.scrollTop - element.clientHeight < 40
+  store.setAutoScrollEnabled(nearBottom)
+}
+
+function resumeAutoScroll(): void {
+  store.setAutoScrollEnabled(true)
+  scrollToBottom(true)
 }
 
 watch(
