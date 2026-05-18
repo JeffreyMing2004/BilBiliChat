@@ -1,6 +1,20 @@
-# Vue 3 + TypeScript + Vite
+# LiveDanmu
 
-This template should help get you started developing with Vue 3 and TypeScript in Vite. The template uses Vue 3 `<script setup>` SFCs, check out the [script setup docs](https://v3.vuejs.org/api/sfc-script-setup.html#sfc-script-setup) to learn more.
+一个基于 `Tauri 2 + Vue 3 + TypeScript + Vite + Element Plus + Pinia` 的跨平台哔哩哔哩直播弹幕桌面客户端。
 
-Learn more about the recommended Project Setup and IDE Support in the [Vue Docs TypeScript Guide](https://vuejs.org/guide/typescript/overview.html#project-setup).
-# BilBiliChat
+## 开发
+
+```bash
+npm install
+npm run tauri dev
+```
+
+## 打包
+
+```bash
+npm run tauri build
+```
+
+默认已配置：
+- macOS `DMG`
+- Windows `NSIS EXE`
