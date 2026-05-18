@@ -1,4 +1,4 @@
-import type { AuthReplyPayload, DanmuMessageItem, RawDanmuCommand, ReconnectNotice } from '../types/danmu'
+import type { AuthReplyPayload, DanmuMessageItem, RawDanmuCommand, ReconnectNotice } from '../types/websocket'
 import { logError, logInfo, logSuccess, logWarning } from '../utils/logger'
 import { decodePacketFrames } from './decoder'
 import { createHeartbeatPacket, HEARTBEAT_INTERVAL_MS } from './heartbeat'

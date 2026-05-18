@@ -30,6 +30,16 @@ export interface ContributorRankItem {
   score: number
 }
 
+export interface LiveRoom {
+  roomId: number
+  title: string
+  uname: string
+  face: string
+  liveStatus: boolean
+  popularity: number
+  connected: boolean
+}
+
 export interface RoomSessionState {
   id: string
   roomIdInput: string

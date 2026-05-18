@@ -1,7 +1,7 @@
 export type MessageType = 'danmu' | 'gift' | 'superChat' | 'system'
 export type SystemMessageKind = 'entry' | 'status' | 'notice'
 
-interface BaseMessage {
+export interface BaseMessage {
   id: string
   type: MessageType
   timestamp: string

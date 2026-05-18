@@ -1,86 +1,42 @@
-import { invoke } from '@tauri-apps/api/core'
-import { listen } from '@tauri-apps/api/event'
-
+import { windowBridge } from '../../core/windows/WindowBridge'
 import type { ActiveRoomEvent, RoomMessageEvent, RoomPatchEvent, RoomSyncSnapshot } from './types'
 
-export const WINDOW_EVENTS = {
-  danmuReady: 'livedanmu://danmu-ready',
-  roomsSnapshot: 'livedanmu://rooms-snapshot',
-  roomPatch: 'livedanmu://room-patch',
-  roomMessage: 'livedanmu://room-message',
-  activeRoom: 'livedanmu://active-room',
-} as const
-
-async function broadcastWindowEvent<T>(event: string, payload: T): Promise<void> {
-  await invoke('broadcast_window_event', { event, payload })
-}
-
 export async function emitDanmuReady(): Promise<void> {
-  await broadcastWindowEvent(WINDOW_EVENTS.danmuReady, { ready: true })
+  await windowBridge.emitDanmuReady()
 }
 
 export async function emitRoomsSnapshot(payload: RoomSyncSnapshot): Promise<void> {
-  await broadcastWindowEvent(WINDOW_EVENTS.roomsSnapshot, payload)
+  await windowBridge.emitRoomsSnapshot(payload)
 }
 
 export async function emitRoomPatch(payload: RoomPatchEvent): Promise<void> {
-  await broadcastWindowEvent(WINDOW_EVENTS.roomPatch, payload)
+  await windowBridge.emitRoomPatch(payload)
 }
 
 export async function emitRoomMessage(payload: RoomMessageEvent): Promise<void> {
-  await broadcastWindowEvent(WINDOW_EVENTS.roomMessage, payload)
+  await windowBridge.emitRoomMessage(payload)
 }
 
 export async function emitActiveRoom(payload: ActiveRoomEvent): Promise<void> {
-  await broadcastWindowEvent(WINDOW_EVENTS.activeRoom, payload)
+  await windowBridge.emitActiveRoom(payload)
 }
 
 export async function listenDanmuReady(handler: () => void): Promise<() => void> {
-  const unlisten = await listen(WINDOW_EVENTS.danmuReady, () => {
-    handler()
-  })
-
-  return () => {
-    unlisten()
-  }
+  return windowBridge.listenDanmuReady(handler)
 }
 
 export async function listenRoomsSnapshot(handler: (payload: RoomSyncSnapshot) => void): Promise<() => void> {
-  const unlisten = await listen<RoomSyncSnapshot>(WINDOW_EVENTS.roomsSnapshot, (event) => {
-    handler(event.payload)
-  })
-
-  return () => {
-    unlisten()
-  }
+  return windowBridge.listenRoomsSnapshot(handler)
 }
 
 export async function listenRoomPatch(handler: (payload: RoomPatchEvent) => void): Promise<() => void> {
-  const unlisten = await listen<RoomPatchEvent>(WINDOW_EVENTS.roomPatch, (event) => {
-    handler(event.payload)
-  })
-
-  return () => {
-    unlisten()
-  }
+  return windowBridge.listenRoomPatch(handler)
 }
 
 export async function listenRoomMessage(handler: (payload: RoomMessageEvent) => void): Promise<() => void> {
-  const unlisten = await listen<RoomMessageEvent>(WINDOW_EVENTS.roomMessage, (event) => {
-    handler(event.payload)
-  })
-
-  return () => {
-    unlisten()
-  }
+  return windowBridge.listenRoomMessage(handler)
 }
 
 export async function listenActiveRoom(handler: (payload: ActiveRoomEvent) => void): Promise<() => void> {
-  const unlisten = await listen<ActiveRoomEvent>(WINDOW_EVENTS.activeRoom, (event) => {
-    handler(event.payload)
-  })
-
-  return () => {
-    unlisten()
-  }
+  return windowBridge.listenActiveRoom(handler)
 }
