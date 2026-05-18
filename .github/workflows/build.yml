@@ -45,7 +45,7 @@ jobs:
           workspaces: "./src-tauri -> target"
 
       - name: Install Frontend Dependencies
-        run: npm ci
+        run: npm install
 
       - name: Build And Release Tauri App
         uses: tauri-apps/tauri-action@v0.6.2
