@@ -94,6 +94,13 @@ export class LiveDanmuSocket {
     this.emitStatus('disconnected', '已断开连接')
   }
 
+  sendHeartbeat(): void {
+    if (this.socket?.readyState === WebSocket.OPEN) {
+      this.lastHeartbeatAt = performance.now()
+      this.socket.send(createHeartbeatPacket())
+    }
+  }
+
   private openSocket(status: 'connecting' | 'reconnecting'): void {
     this.isAuthenticated = false
     this.socket = new WebSocket(BILIBILI_WEBSOCKET_URL)
@@ -221,10 +228,7 @@ export class LiveDanmuSocket {
     this.clearHeartbeatTimer()
 
     this.heartbeatTimer = window.setInterval(() => {
-      if (this.socket?.readyState === WebSocket.OPEN) {
-        this.lastHeartbeatAt = performance.now()
-        this.socket.send(createHeartbeatPacket())
-      }
+      this.sendHeartbeat()
     }, HEARTBEAT_INTERVAL_MS)
   }
 

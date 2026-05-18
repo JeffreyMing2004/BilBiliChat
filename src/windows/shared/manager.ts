@@ -6,6 +6,7 @@ export const WINDOW_LABELS: Record<AppWindowLabel, AppWindowLabel> = {
   danmu: 'danmu',
   settings: 'settings',
   login: 'login',
+  debug: 'debug',
 }
 
 export function getCurrentWindowLabel(): AppWindowLabel {

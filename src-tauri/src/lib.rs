@@ -11,6 +11,7 @@ fn ensure_app_window(app: &AppHandle, kind: &str) -> tauri::Result<()> {
     "danmu" => ("danmu", "LiveDanmu - DanmuWindow"),
     "settings" => ("settings", "LiveDanmu - SettingsWindow"),
     "login" => ("login", "LiveDanmu - LoginWindow"),
+    "debug" => ("debug", "LiveDanmu - DebugWindow"),
     _ => ("main", "LiveDanmu"),
   };
 
@@ -44,6 +45,12 @@ fn ensure_app_window(app: &AppHandle, kind: &str) -> tauri::Result<()> {
       .transparent(true)
       .decorations(false)
       .resizable(false),
+    "debug" => builder
+      .inner_size(760.0, 540.0)
+      .min_inner_size(680.0, 480.0)
+      .transparent(true)
+      .decorations(false)
+      .resizable(true),
     _ => builder,
   };
 

@@ -854,6 +854,12 @@ input {
   padding-top: 14px;
 }
 
+.overlay-render-root {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
 .is-obs-overlay .overlay-topbar,
 .is-obs-overlay .overlay-statusbar,
 .is-obs-overlay .danmu-panel {
@@ -900,6 +906,19 @@ input {
 .login-shell {
   justify-content: center;
   align-items: center;
+}
+
+.debug-shell {
+  padding: 18px;
+}
+
+.debug-panel {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
 }
 
 .login-panel {

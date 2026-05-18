@@ -1,6 +1,7 @@
 import { listen } from '@tauri-apps/api/event'
 import { PhysicalPosition, PhysicalSize, getCurrentWindow } from '@tauri-apps/api/window'
 
+import { recoveryManager } from '../core/recovery/RecoveryManager'
 import { loadStorageItem, saveStorageItem, windowStateStorageKey } from '../settings'
 import type { AppSettings, WindowStateSnapshot } from '../types/settings'
 import { getCurrentWindowLabel } from '../windows/shared/manager'
@@ -24,6 +25,7 @@ export async function initializeWindowState(): Promise<() => void> {
   const currentWindow = getCurrentWindow()
   const windowLabel = getCurrentWindowLabel()
   await restoreWindowState()
+  recoveryManager.captureWindow(windowLabel, true)
 
   const saveBounds = async () => {
     const [size, position] = await Promise.all([currentWindow.outerSize(), currentWindow.outerPosition()])
@@ -46,14 +48,17 @@ export async function initializeWindowState(): Promise<() => void> {
 
     if (windowLabel === 'main' && settingsStore.settings.minimizeToTray) {
       event.preventDefault()
+      recoveryManager.captureWindow(windowLabel, false)
       await currentWindow.hide()
     }
   })
   const unlistenShow = await listen('tray://show-window', async () => {
+    recoveryManager.captureWindow(windowLabel, true)
     await showMainWindow()
   })
 
   return () => {
+    recoveryManager.captureWindow(windowLabel, false)
     unlistenResize()
     unlistenMove()
     unlistenClose()

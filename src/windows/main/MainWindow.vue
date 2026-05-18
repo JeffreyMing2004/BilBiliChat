@@ -28,6 +28,12 @@
           设置窗口
         </el-button>
         <el-button
+          plain
+          @click="openDebug"
+        >
+          调试窗口
+        </el-button>
+        <el-button
           type="primary"
           @click="openDanmuWindow"
         >
@@ -428,6 +434,10 @@ async function openSettings(): Promise<void> {
 
 async function openLogin(): Promise<void> {
   await openAppWindow('login')
+}
+
+async function openDebug(): Promise<void> {
+  await openAppWindow('debug')
 }
 
 onMounted(async () => {

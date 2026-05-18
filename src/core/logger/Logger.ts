@@ -1,7 +1,21 @@
 import { formatTime } from '../../utils/time'
 
 export type LogLevel = 'info' | 'warn' | 'error' | 'debug'
-export type LogScope = 'connection' | 'websocket' | 'message' | 'store' | 'rooms' | 'windows' | 'service' | 'eventbus'
+export type LogScope =
+  | 'connection'
+  | 'websocket'
+  | 'message'
+  | 'store'
+  | 'rooms'
+  | 'windows'
+  | 'service'
+  | 'eventbus'
+  | 'overlay'
+  | 'performance'
+  | 'plugin'
+  | 'live'
+  | 'recovery'
+  | 'design'
 
 export interface LogRecord {
   id: string

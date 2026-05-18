@@ -16,7 +16,7 @@ export const WINDOW_EVENTS = {
 export class WindowBridge {
   getCurrentWindowLabel(): AppWindowLabel {
     const label = getCurrentWindow().label
-    if (label === 'danmu' || label === 'settings' || label === 'login') {
+    if (label === 'danmu' || label === 'settings' || label === 'login' || label === 'debug') {
       return label
     }
     return 'main'

@@ -1,4 +1,5 @@
 import type { LiveMessage } from './message'
+import type { LiveProviderKind } from './live'
 
 export type ConnectionStatus =
   | 'idle'
@@ -36,6 +37,7 @@ export interface RoomConnectionOptions {
   roomId: number
   reconnectInterval: number
   autoReconnect: boolean
+  providerKind?: LiveProviderKind
 }
 
 export interface RoomConnectionState {

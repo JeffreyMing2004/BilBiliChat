@@ -37,7 +37,12 @@
       </div>
     </header>
 
-    <DanmuList />
+    <section class="danmu-panel danmu-panel--embedded glass-panel">
+      <div
+        ref="overlayRoot"
+        class="overlay-render-root"
+      />
+    </section>
 
     <footer class="overlay-statusbar glass-panel">
       <div class="status-item">
@@ -73,9 +78,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
-import DanmuList from '../../components/DanmuList.vue'
+import { OverlayStyleEngine } from '../../core/overlay/css/OverlayStyleEngine'
+import { OverlayRenderer } from '../../core/overlay/renderer/OverlayRenderer'
+import { performanceMonitor } from '../../core/performance/PerformanceMonitor'
+import { recoveryManager } from '../../core/recovery/RecoveryManager'
 import { useDanmuStore } from '../../stores/danmu'
 import { useSettingsStore } from '../../stores/settings'
 import { applyWindowPreferences, initializeWindowState } from '../../window'
@@ -84,6 +92,12 @@ import { closeCurrentWindow } from '../shared/manager'
 const store = useDanmuStore()
 const settingsStore = useSettingsStore()
 const cleanups: Array<() => void> = []
+const overlayRoot = ref<HTMLElement | null>(null)
+let overlayRenderer: OverlayRenderer | null = null
+let overlayStyleEngine: OverlayStyleEngine | null = null
+let renderedRoomId = ''
+let renderedMessageCount = 0
+let renderedLastMessageId = ''
 
 const activeRoom = computed(() => store.activeRoom)
 const topContributorSummary = computed(() => {
@@ -121,22 +135,112 @@ async function closeWindow(): Promise<void> {
   await closeCurrentWindow()
 }
 
+function syncPerformanceState(): void {
+  performanceMonitor.updateRoomCount(store.roomList.length)
+  performanceMonitor.updateConnectionStatus(activeRoom.value?.status ?? 'idle')
+  performanceMonitor.updateLatency(activeRoom.value?.wsLatency ?? 0)
+}
+
+function syncOverlay(force = false): void {
+  if (!overlayRenderer) {
+    return
+  }
+
+  const room = activeRoom.value
+  if (!room) {
+    overlayRenderer.clear()
+    renderedRoomId = ''
+    renderedMessageCount = 0
+    renderedLastMessageId = ''
+    syncPerformanceState()
+    return
+  }
+
+  const lastMessageId = room.messages.at(-1)?.id ?? ''
+  const shouldReplace = force
+    || renderedRoomId !== room.id
+    || room.messages.length < renderedMessageCount
+    || (room.messages.length === renderedMessageCount && renderedLastMessageId !== lastMessageId)
+
+  if (shouldReplace) {
+    overlayRenderer.replaceMessages(room.messages)
+  } else if (room.messages.length > renderedMessageCount) {
+    room.messages.slice(renderedMessageCount).forEach((message) => {
+      overlayRenderer?.enqueue(message)
+    })
+  }
+
+  renderedRoomId = room.id
+  renderedMessageCount = room.messages.length
+  renderedLastMessageId = lastMessageId
+  syncPerformanceState()
+}
+
+function ensureOverlayRenderer(): void {
+  if (!overlayRoot.value) {
+    return
+  }
+
+  overlayStyleEngine?.destroy()
+  overlayRenderer?.destroy()
+  overlayStyleEngine = new OverlayStyleEngine({
+    target: overlayRoot.value,
+    theme: settingsStore.settings.theme === 'neon' ? 'neon' : 'dark',
+    settings: settingsStore.settings,
+  })
+  overlayRenderer = new OverlayRenderer({
+    container: overlayRoot.value,
+    settings: settingsStore.settings,
+    performanceMonitor,
+    maxVisibleItems: Math.min(settingsStore.settings.maxMessages, 48),
+    maxQueueSize: Math.min(settingsStore.settings.maxMessages * 2, 200),
+  })
+  performanceMonitor.updateOverlayMounted(true)
+}
+
 onMounted(async () => {
   settingsStore.initialize()
   await store.initialize()
   cleanups.push(await initializeWindowState())
+  cleanups.push(recoveryManager.register('overlay', 'danmu-window-overlay', async () => {
+    ensureOverlayRenderer()
+    syncOverlay(true)
+  }))
+  recoveryManager.captureWindow('danmu', true)
+  ensureOverlayRenderer()
+  syncOverlay(true)
   await applyWindowPreferences(settingsStore.settings)
 })
 
 watch(
   () => settingsStore.settings,
   (settings) => {
+    overlayRenderer?.updateSettings(settings)
+    overlayStyleEngine?.updateSettings(settings)
     void applyWindowPreferences(settings)
   },
   { deep: true },
 )
 
+watch(
+  () => [
+    activeRoom.value?.id ?? '',
+    activeRoom.value?.messages.length ?? 0,
+    activeRoom.value?.messages.at(-1)?.id ?? '',
+    store.roomList.length,
+    activeRoom.value?.status ?? 'idle',
+    activeRoom.value?.wsLatency ?? 0,
+  ],
+  () => {
+    syncOverlay()
+  },
+)
+
 onBeforeUnmount(() => {
+  recoveryManager.captureWindow('danmu', false)
+  performanceMonitor.updateOverlayMounted(false)
+  overlayRenderer?.destroy()
+  overlayStyleEngine?.destroy()
   cleanups.forEach((cleanup) => cleanup())
 })
 </script>

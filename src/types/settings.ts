@@ -1,4 +1,4 @@
-export type ThemeMode = 'dark'
+export type ThemeMode = 'dark' | 'obs' | 'neon'
 export type MessageDirection = 'bottom-up' | 'top-down'
 
 export interface AppSettings {

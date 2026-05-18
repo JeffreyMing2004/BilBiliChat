@@ -2,6 +2,9 @@ import { connectionManager } from '../connection/ConnectionManager'
 import { eventBus } from '../events/EventBus'
 import { createSystemNotice } from '../message/MessageFactory'
 import { logInfo, logWarn } from '../logger/Logger'
+import { performanceMonitor } from '../performance/PerformanceMonitor'
+import { pluginManager } from '../plugins/PluginManager'
+import { recoveryManager } from '../recovery/RecoveryManager'
 import { windowBridge } from '../windows/WindowBridge'
 import { loadStorageItem, saveStorageItem, activeRoomStorageKey, roomsStorageKey } from '../../settings'
 import { calculateTopContributors } from '../../services/rankingService'
@@ -118,6 +121,16 @@ export class RoomManager {
 
   private notify(): void {
     const snapshot = this.createSnapshot()
+    performanceMonitor.updateRoomCount(this.roomOrder.length)
+    recoveryManager.captureRooms(
+      this.activeRoomId,
+      this.roomOrder.map((id) => ({
+        id,
+        roomIdInput: this.rooms[id]?.roomIdInput ?? '',
+        autoConnect: this.rooms[id]?.autoConnect ?? false,
+        status: this.rooms[id]?.status ?? 'idle',
+      })),
+    )
     this.listeners.forEach((listener) => listener(snapshot))
   }
 
@@ -208,6 +221,7 @@ export class RoomManager {
 
   private async bindMainWindowEvents(): Promise<void> {
     this.cleanups.push(eventBus.on('MESSAGE', ({ roomKey, message }) => {
+      void pluginManager.emitHook('onMessage', { roomKey, message })
       this.addMessage(roomKey, message)
     }))
     this.cleanups.push(eventBus.on('CONNECT', ({ roomKey, connection }) => {
@@ -351,6 +365,7 @@ export class RoomManager {
 
     if (sync && this.isMainWindow) {
       eventBus.emit('ROOM_SWITCH', { roomKey })
+      void pluginManager.emitHook('onRoomSwitch', { roomKey })
       void windowBridge.emitActiveRoom({ roomId: roomKey })
     }
   }
