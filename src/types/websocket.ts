@@ -1,5 +1,6 @@
 import type { LiveMessage } from './message'
 import type { LiveProviderKind } from './live'
+import type { OpenLiveStateSnapshot } from './openlive'
 
 export type ConnectionStatus =
   | 'idle'
@@ -30,6 +31,8 @@ export interface ConnectionStatusPayload {
   statusText: string
   websocketState: string
   reconnectCount: number
+  providerKind?: LiveProviderKind
+  openLive?: OpenLiveStateSnapshot | null
   error?: string
 }
 

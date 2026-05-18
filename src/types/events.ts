@@ -1,4 +1,5 @@
 import type { LiveMessage } from './message'
+import type { OpenLiveDebugRecord, OpenLiveStateSnapshot } from './openlive'
 import type { ConnectionStatusPayload, ReconnectNotice } from './websocket'
 
 export const APP_EVENT = {
@@ -8,6 +9,8 @@ export const APP_EVENT = {
   RECONNECT: 'RECONNECT',
   ROOM_SWITCH: 'ROOM_SWITCH',
   POPULARITY_UPDATE: 'POPULARITY_UPDATE',
+  OPENLIVE_STATUS: 'OPENLIVE_STATUS',
+  OPENLIVE_DEBUG: 'OPENLIVE_DEBUG',
 } as const
 
 export type AppEventName = keyof typeof APP_EVENT
@@ -42,6 +45,16 @@ export interface PopularityUpdateEventPayload {
   latency: number
 }
 
+export interface OpenLiveStatusEventPayload {
+  roomKey: string
+  state: OpenLiveStateSnapshot | null
+}
+
+export interface OpenLiveDebugEventPayload {
+  roomKey: string
+  record: OpenLiveDebugRecord
+}
+
 export interface AppEventMap {
   MESSAGE: MessageEventPayload
   CONNECT: ConnectEventPayload
@@ -49,4 +62,6 @@ export interface AppEventMap {
   RECONNECT: ReconnectEventPayload
   ROOM_SWITCH: RoomSwitchEventPayload
   POPULARITY_UPDATE: PopularityUpdateEventPayload
+  OPENLIVE_STATUS: OpenLiveStatusEventPayload
+  OPENLIVE_DEBUG: OpenLiveDebugEventPayload
 }

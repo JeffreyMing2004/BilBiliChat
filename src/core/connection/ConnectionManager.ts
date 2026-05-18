@@ -7,12 +7,14 @@ import { pluginManager } from '../plugins/PluginManager'
 import { recoveryManager } from '../recovery/RecoveryManager'
 import type { ConnectionStatusPayload, RoomConnectionOptions } from '../../types/websocket'
 import type { LiveProvider } from '../live'
+import type { OpenLiveStateSnapshot } from '../../types/openlive'
 
 interface ConnectionSession {
   provider: LiveProvider
   popularity: number
   latency: number
   manualDisconnect: boolean
+  openLiveState: OpenLiveStateSnapshot | null
 }
 
 export class ConnectionManager {
@@ -30,14 +32,18 @@ export class ConnectionManager {
 
     const session: ConnectionSession = {
       manualDisconnect: false,
+      openLiveState: null,
       popularity: 0,
       latency: 0,
       provider: createLiveProvider(options.providerKind ?? 'public', {
+        roomKey,
         roomId: options.roomId,
         reconnectInterval: options.reconnectInterval,
         autoReconnect: options.autoReconnect,
         openLiveIdentityCode: options.openLiveIdentityCode,
         onStatus: (payload) => {
+          payload.providerKind ??= options.providerKind ?? 'public'
+          payload.openLive ??= session.openLiveState
           Object.assign(connectionState, payload)
           performanceMonitor.updateConnectionStatus(payload.status)
 
@@ -95,6 +101,19 @@ export class ConnectionManager {
         onRawCommand: (payload) => {
           logDebug('websocket', `${roomKey} raw ${payload.cmd ?? 'UNKNOWN'}`)
         },
+        onOpenLiveState: (payload) => {
+          session.openLiveState = payload
+          eventBus.emit('OPENLIVE_STATUS', {
+            roomKey,
+            state: payload,
+          })
+        },
+        onOpenLiveDebug: (record) => {
+          eventBus.emit('OPENLIVE_DEBUG', {
+            roomKey,
+            record,
+          })
+        },
         onReconnectScheduled: (notice) => {
           eventBus.emit('RECONNECT', {
             roomKey,
@@ -126,6 +145,10 @@ export class ConnectionManager {
     }
 
     session.manualDisconnect = true
+    eventBus.emit('OPENLIVE_STATUS', {
+      roomKey,
+      state: null,
+    })
     void session.provider.disconnect()
     this.sessions.delete(roomKey)
     logInfo('connection', `ConnectionManager disconnect ${roomKey}`)

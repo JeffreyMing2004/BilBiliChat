@@ -11,6 +11,103 @@ function createBaseMessage() {
   }
 }
 
+interface MessageMeta {
+  provider?: DanmuMessage['provider']
+  avatar?: string
+  userLevel?: number
+  medalName?: string
+  medalLevel?: number
+  guardLevel?: number
+  guardLabel?: string
+  likeCount?: number
+}
+
+export function createDanmuMessage(
+  username: string,
+  content: string,
+  rawCommand = 'DANMU_MSG',
+  meta: MessageMeta = {},
+): DanmuMessage {
+  return {
+    ...createBaseMessage(),
+    ...meta,
+    type: 'danmu',
+    username,
+    content,
+    summary: `[${username}] ${content}`,
+    userColor: colorFromText(username),
+    rawCommand,
+  }
+}
+
+export function createGiftMessage(
+  username: string,
+  giftName: string,
+  giftCount: number,
+  giftType: string,
+  rawCommand = 'SEND_GIFT',
+  price?: number,
+  meta: MessageMeta = {},
+): GiftMessage {
+  return {
+    ...createBaseMessage(),
+    ...meta,
+    type: 'gift',
+    username,
+    content: `${giftName} × ${giftCount}`,
+    summary: `[${username}] 赠送了 ${giftName} × ${giftCount}`,
+    userColor: '#ffb75e',
+    giftName,
+    giftCount,
+    giftType,
+    price,
+    rawCommand,
+  }
+}
+
+export function createSuperChatMessage(
+  username: string,
+  content: string,
+  price: number,
+  rawCommand = 'SUPER_CHAT_MESSAGE',
+  priceColor = resolveSCColor(price),
+  meta: MessageMeta = {},
+): SCMessage {
+  return {
+    ...createBaseMessage(),
+    ...meta,
+    type: 'superChat',
+    username,
+    content,
+    summary: `[${username}] ￥${price}\n${content}`,
+    userColor: '#ffffff',
+    price,
+    priceColor,
+    rawCommand,
+  }
+}
+
+export function createSystemMessage(
+  username: string,
+  content: string,
+  systemKind: SystemMessage['systemKind'],
+  tone: SystemMessage['tone'],
+  rawCommand = 'SYSTEM',
+  meta: MessageMeta = {},
+): SystemMessage {
+  return {
+    ...createBaseMessage(),
+    ...meta,
+    type: 'system',
+    username,
+    content,
+    summary: content,
+    systemKind,
+    tone,
+    rawCommand,
+  }
+}
+
 export function parseCommandText(text: string): RawDanmuCommand[] {
   return text
     .split(/(?<=\})(?=\{)/g)
@@ -35,15 +132,7 @@ function parseDanmuMessage(payload: RawDanmuCommand): DanmuMessage | null {
     return null
   }
 
-  return {
-    ...createBaseMessage(),
-    type: 'danmu',
-    username,
-    content,
-    summary: `[${username}] ${content}`,
-    userColor: colorFromText(username),
-    rawCommand: 'DANMU_MSG',
-  }
+  return createDanmuMessage(username, content)
 }
 
 function parseGiftMessage(payload: RawDanmuCommand): GiftMessage {
@@ -55,21 +144,8 @@ function parseGiftMessage(payload: RawDanmuCommand): GiftMessage {
     ? data.coin_type === 'gold' ? '金瓜子礼物' : '银瓜子礼物'
     : '普通礼物'
   const price = typeof data.price === 'number' ? data.price : undefined
-  const content = `${giftName} × ${giftCount}`
 
-  return {
-    ...createBaseMessage(),
-    type: 'gift',
-    username,
-    content,
-    summary: `[${username}] 赠送了 ${giftName} × ${giftCount}`,
-    userColor: '#ffb75e',
-    giftName,
-    giftCount,
-    giftType,
-    price,
-    rawCommand: 'SEND_GIFT',
-  }
+  return createGiftMessage(username, giftName, giftCount, giftType, 'SEND_GIFT', price)
 }
 
 function resolveSCColor(price: number): string {
@@ -95,33 +171,14 @@ function parseSuperChatMessage(payload: RawDanmuCommand): SCMessage {
   const price = typeof data.price === 'number' ? data.price : 0
   const priceColor = resolveSCColor(price)
 
-  return {
-    ...createBaseMessage(),
-    type: 'superChat',
-    username,
-    content,
-    summary: `[${username}] ￥${price}\n${content}`,
-    userColor: '#ffffff',
-    price,
-    priceColor,
-    rawCommand: 'SUPER_CHAT_MESSAGE',
-  }
+  return createSuperChatMessage(username, content, price, 'SUPER_CHAT_MESSAGE', priceColor)
 }
 
 function parseInteractMessage(payload: RawDanmuCommand): SystemMessage {
   const data = payload.data ?? {}
   const username = typeof data.uname === 'string' ? data.uname : '访客'
 
-  return {
-    ...createBaseMessage(),
-    type: 'system',
-    username,
-    content: `${username} 进入直播间`,
-    summary: `[${username}] 进入直播间`,
-    systemKind: 'entry',
-    tone: 'soft',
-    rawCommand: 'INTERACT_WORD',
-  }
+  return createSystemMessage(username, `${username} 进入直播间`, 'entry', 'soft', 'INTERACT_WORD')
 }
 
 export function createSystemNotice(
@@ -129,16 +186,7 @@ export function createSystemNotice(
   tone: SystemMessage['tone'] = 'normal',
   rawCommand = 'SYSTEM',
 ): SystemMessage {
-  return {
-    ...createBaseMessage(),
-    type: 'system',
-    username: '系统',
-    content,
-    summary: content,
-    systemKind: 'notice',
-    tone,
-    rawCommand,
-  }
+  return createSystemMessage('系统', content, 'notice', tone, rawCommand)
 }
 
 export function normalizeRawMessage(payload: RawDanmuCommand): DanmuMessageItem | null {

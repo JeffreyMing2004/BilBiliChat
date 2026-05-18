@@ -1,5 +1,7 @@
 import type { ConnectionStatus } from './danmu'
 import type { LiveMessage } from './message'
+import type { LiveProviderKind } from './live'
+import type { OpenLiveDebugRecord, OpenLiveStateSnapshot } from './openlive'
 
 export interface PersistedRoomSession {
   id: string
@@ -47,6 +49,7 @@ export interface RoomSessionState {
   status: ConnectionStatus
   statusText: string
   websocketState: string
+  providerKind: LiveProviderKind
   popularity: number
   reconnectCount: number
   lastError: string
@@ -60,4 +63,6 @@ export interface RoomSessionState {
   danmuWindowVisible: boolean
   streamer: StreamerProfile | null
   topContributors: ContributorRankItem[]
+  openLive: OpenLiveStateSnapshot | null
+  openLiveDebugRecords: OpenLiveDebugRecord[]
 }

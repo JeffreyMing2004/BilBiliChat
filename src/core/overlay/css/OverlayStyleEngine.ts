@@ -137,10 +137,19 @@ export class OverlayStyleEngine {
 .overlay-render-item__header {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 10px;
   margin-bottom: 6px;
   color: var(--overlay-text-secondary);
   font-size: calc(var(--overlay-font-size) * 0.56);
+}
+
+.overlay-render-item__name {
+  flex: 1;
+  min-width: 0;
+  color: var(--overlay-text-primary);
+  font-size: calc(var(--overlay-font-size) * 0.78);
+  font-weight: 800;
 }
 
 .overlay-render-item__badge {
@@ -150,18 +159,54 @@ export class OverlayStyleEngine {
   color: var(--overlay-text-primary);
 }
 
+.overlay-render-item__meta {
+  margin-bottom: 8px;
+  color: var(--overlay-text-secondary);
+  font-size: calc(var(--overlay-font-size) * 0.5);
+  line-height: 1.45;
+}
+
+.overlay-render-item__content {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.overlay-render-item--official {
+  border-color: color-mix(in srgb, #00a1d6 38%, transparent);
+}
+
 .overlay-render-item--gift {
   border-color: color-mix(in srgb, #f59e0b 40%, transparent);
   box-shadow: 0 10px 24px rgba(245, 158, 11, var(--overlay-gift-strength));
 }
 
 .overlay-render-item--superChat {
-  border-color: color-mix(in srgb, #fb7185 42%, transparent);
-  box-shadow: 0 10px 24px rgba(251, 113, 133, var(--overlay-sc-strength));
+  border-color: color-mix(in srgb, var(--overlay-message-accent, #fb7185) 42%, transparent);
+  box-shadow: 0 10px 24px color-mix(in srgb, var(--overlay-message-accent, #fb7185) 28%, transparent);
 }
 
 .overlay-render-item--system {
   border-color: color-mix(in srgb, #22c55e 36%, transparent);
+}
+
+.overlay-render-item--entry {
+  border-color: color-mix(in srgb, #60a5fa 38%, transparent);
+}
+
+.overlay-render-item--guard {
+  border-color: color-mix(in srgb, #facc15 40%, transparent);
+  box-shadow: 0 10px 24px rgba(250, 204, 21, 0.16);
+}
+
+.overlay-render-item--like {
+  border-color: color-mix(in srgb, #22c55e 44%, transparent);
+  box-shadow: 0 10px 24px rgba(34, 197, 94, 0.14);
+}
+
+.overlay-render-item--like.is-animated {
+  animation:
+    overlay-item-in var(--overlay-animation-speed) cubic-bezier(0.22, 1, 0.36, 1),
+    overlay-like-pop 720ms ease;
 }
 
 @keyframes overlay-item-in {
@@ -171,6 +216,18 @@ export class OverlayStyleEngine {
   }
   to {
     opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes overlay-like-pop {
+  0% {
+    transform: translate3d(0, 0, 0) scale(0.98);
+  }
+  45% {
+    transform: translate3d(0, 0, 0) scale(1.015);
+  }
+  100% {
     transform: translate3d(0, 0, 0) scale(1);
   }
 }

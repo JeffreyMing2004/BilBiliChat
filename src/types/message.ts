@@ -1,3 +1,5 @@
+import type { LiveProviderKind } from './live'
+
 export type MessageType = 'danmu' | 'gift' | 'superChat' | 'system'
 export type SystemMessageKind = 'entry' | 'status' | 'notice'
 
@@ -9,6 +11,14 @@ export interface BaseMessage {
   username: string
   rawCommand: string
   summary: string
+  provider?: LiveProviderKind
+  avatar?: string
+  userLevel?: number
+  medalName?: string
+  medalLevel?: number
+  guardLevel?: number
+  guardLabel?: string
+  likeCount?: number
 }
 
 export interface DanmuMessage extends BaseMessage {

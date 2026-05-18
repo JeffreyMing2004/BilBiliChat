@@ -39,7 +39,7 @@
         <span>直播连接源</span>
         <el-radio-group
           :model-value="settingsStore.settings.liveProvider"
-          @change="patch({ liveProvider: $event })"
+          @change="changeLiveProvider"
         >
           <el-radio-button label="public">
             Public WS
@@ -60,6 +60,36 @@
           @update:model-value="patch({ openLiveIdentityCode: String($event) })"
         />
       </label>
+      <div
+        v-if="settingsStore.settings.liveProvider === 'open-live'"
+        class="settings-actions"
+      >
+        <el-tag
+          :type="identityCodeStatus.valid ? 'success' : 'warning'"
+          effect="plain"
+        >
+          {{ identityCodeStatus.statusText }}
+        </el-tag>
+        <el-button
+          plain
+          @click="clearOpenLiveIdentityCode"
+        >
+          清空身份码
+        </el-button>
+        <el-button
+          type="primary"
+          plain
+          :disabled="!identityCodeStatus.valid"
+          @click="reconnectActiveProvider"
+        >
+          应用身份码并重连
+        </el-button>
+      </div>
+      <OpenLiveStatusPanel
+        v-if="settingsStore.settings.liveProvider === 'open-live'"
+        :room="store.activeRoom"
+        :identity-code="settingsStore.settings.openLiveIdentityCode"
+      />
       <div class="settings-item">
         <span>OBS 模式</span>
         <el-switch
@@ -503,10 +533,13 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
 import { exportRoomMessagesAsJson, exportRoomMessagesAsTxt } from '../export'
 import { pluginManager } from '../core/plugins/PluginManager'
+import { validateOpenLiveIdentityCode } from '../modules/openlive'
+import OpenLiveStatusPanel from '../modules/openlive/OpenLiveStatusPanel.vue'
 import { importProductConfig, exportProductConfig } from '../modules/sync'
 import {
   checkForAppUpdates,
@@ -532,9 +565,37 @@ withDefaults(defineProps<{
 
 const store = useDanmuStore()
 const settingsStore = useSettingsStore()
+const identityCodeStatus = computed(() => validateOpenLiveIdentityCode(settingsStore.settings.openLiveIdentityCode))
 
 function patch(partial: Partial<AppSettings>): void {
   settingsStore.patchSettings(partial)
+}
+
+function changeLiveProvider(kind: AppSettings['liveProvider']): void {
+  patch({ liveProvider: kind })
+  if (store.activeRoom?.status === 'connected' || store.activeRoom?.connecting) {
+    void store.reconnectActiveRoom()
+    ElMessage.info(`已切换到 ${kind === 'open-live' ? 'OpenLive' : 'Public WS'}，正在重建连接`)
+  }
+}
+
+function clearOpenLiveIdentityCode(): void {
+  patch({ openLiveIdentityCode: '' })
+}
+
+function reconnectActiveProvider(): void {
+  if (!identityCodeStatus.value.valid) {
+    ElMessage.warning(identityCodeStatus.value.statusText)
+    return
+  }
+
+  if (!store.activeRoom) {
+    ElMessage.success('身份码已保存')
+    return
+  }
+
+  void store.reconnectActiveRoom()
+  ElMessage.success('身份码已应用，正在重建当前连接')
 }
 
 function exportTxt(): void {

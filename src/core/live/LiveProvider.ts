@@ -1,5 +1,6 @@
 import type { LiveMessage } from '../../types/message'
 import type { LiveProviderKind } from '../../types/live'
+import type { OpenLiveDebugRecord, OpenLiveStateSnapshot } from '../../types/openlive'
 import type { RawDanmuCommand, ReconnectNotice } from '../../types/websocket'
 
 export interface LiveProviderStatusPayload {
@@ -7,6 +8,8 @@ export interface LiveProviderStatusPayload {
   statusText: string
   websocketState: string
   reconnectCount: number
+  providerKind?: LiveProviderKind
+  openLive?: OpenLiveStateSnapshot | null
   error?: string
 }
 
@@ -18,6 +21,7 @@ export interface LiveProviderRoomInfo {
 }
 
 export interface LiveProviderOptions {
+  roomKey: string
   roomId: number
   reconnectInterval: number
   autoReconnect: boolean
@@ -27,6 +31,8 @@ export interface LiveProviderOptions {
   onLatency?: (latency: number) => void
   onMessage: (message: LiveMessage) => void
   onRawCommand?: (payload: RawDanmuCommand) => void
+  onOpenLiveState?: (payload: OpenLiveStateSnapshot | null) => void
+  onOpenLiveDebug?: (record: OpenLiveDebugRecord) => void
   onReconnectScheduled?: (notice: ReconnectNotice) => void
 }
 

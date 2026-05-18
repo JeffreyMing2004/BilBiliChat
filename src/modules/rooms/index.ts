@@ -12,6 +12,7 @@ export function createRoomSession(roomIdInput = ''): RoomSessionState {
     status: 'idle',
     statusText: '等待连接',
     websocketState: 'CLOSED',
+    providerKind: 'public',
     popularity: 0,
     reconnectCount: 0,
     lastError: '',
@@ -24,6 +25,8 @@ export function createRoomSession(roomIdInput = ''): RoomSessionState {
     wsLatency: 0,
     danmuWindowVisible: false,
     streamer: null,
+    openLive: null,
+    openLiveDebugRecords: [],
     topContributors: [],
   }
 }

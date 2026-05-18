@@ -1,5 +1,6 @@
 import type { LiveMessage } from '../../../types/message'
 import type { AppSettings } from '../../../types/settings'
+import { resolveOpenLiveMessageTags, resolveOpenLiveMessageVariant } from '../../../modules/openlive'
 import { reportOverlayCrash } from '../../crash/CrashReporter'
 import type { PerformanceMonitor } from '../../performance/PerformanceMonitor'
 import { logInfo } from '../../logger/Logger'
@@ -19,6 +20,7 @@ interface OverlayNodeRefs {
   header: HTMLDivElement
   name: HTMLSpanElement
   badge: HTMLSpanElement
+  meta: HTMLDivElement
   content: HTMLDivElement
 }
 
@@ -51,9 +53,14 @@ class MessagePool {
     if (refs) {
       refs.name.textContent = ''
       refs.badge.textContent = ''
+      refs.meta.textContent = ''
+      refs.meta.hidden = false
       refs.content.textContent = ''
     }
     element.className = 'overlay-render-item'
+    delete element.dataset.provider
+    delete element.dataset.command
+    element.style.removeProperty('--overlay-message-accent')
     element.remove()
     this.pool.push(element)
   }
@@ -72,19 +79,23 @@ class MessagePool {
     const header = document.createElement('div')
     const name = document.createElement('span')
     const badge = document.createElement('span')
+    const meta = document.createElement('div')
     const content = document.createElement('div')
 
     header.className = 'overlay-render-item__header'
+    name.className = 'overlay-render-item__name'
     badge.className = 'overlay-render-item__badge'
+    meta.className = 'overlay-render-item__meta'
     content.className = 'overlay-render-item__content'
 
     header.append(name, badge)
-    element.append(header, content)
+    element.append(header, meta, content)
 
     this.refs.set(element, {
       header,
       name,
       badge,
+      meta,
       content,
     })
 
@@ -302,19 +313,45 @@ export class OverlayRenderer {
 
   private renderMessage(element: HTMLDivElement, message: LiveMessage): void {
     const refs = this.pool.getRefs(element)
-    element.className = `overlay-render-item overlay-render-item--${message.type} ${this.settings.animationsEnabled ? 'is-animated' : ''}`.trim()
+    const variant = resolveOpenLiveMessageVariant(message)
+    const classes = [
+      'overlay-render-item',
+      `overlay-render-item--${message.type}`,
+      message.provider === 'open-live' ? 'overlay-render-item--official' : '',
+      variant !== 'default' && variant !== 'official' ? `overlay-render-item--${variant}` : '',
+      this.settings.animationsEnabled ? 'is-animated' : '',
+    ].filter(Boolean)
+
+    element.className = classes.join(' ')
+    element.dataset.provider = message.provider ?? 'public'
+    element.dataset.command = message.rawCommand
     refs.name.textContent = message.username
     refs.content.textContent = message.content
+    const metaText = resolveOpenLiveMessageTags(message).join(' · ')
+    refs.meta.textContent = metaText
+    refs.meta.hidden = !metaText
+
+    if (message.type === 'superChat') {
+      element.style.setProperty('--overlay-message-accent', message.priceColor)
+    } else {
+      element.style.removeProperty('--overlay-message-accent')
+    }
 
     switch (message.type) {
       case 'gift':
-        refs.badge.textContent = `${message.giftName} x${message.giftCount}`
+        refs.badge.textContent = message.rawCommand === 'GUARD_BUY'
+          ? message.guardLabel || 'Guard'
+          : `${message.giftName} x${message.giftCount}`
         break
       case 'superChat':
         refs.badge.textContent = `SC ${message.price}`
         break
       case 'system':
-        refs.badge.textContent = message.systemKind.toUpperCase()
+        refs.badge.textContent = message.rawCommand === 'LIKE_INFO_V3_CLICK'
+          ? 'LIKE'
+          : message.rawCommand === 'ENTRY_EFFECT' || message.rawCommand === 'INTERACT_WORD'
+            ? 'ENTRY'
+            : message.systemKind.toUpperCase()
         break
       default:
         refs.badge.textContent = '弹幕'

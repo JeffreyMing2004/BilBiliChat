@@ -40,6 +40,7 @@ function createRoomSession(roomIdInput = ''): RoomSessionState {
     status: 'idle',
     statusText: '等待连接',
     websocketState: 'CLOSED',
+    providerKind: 'public',
     popularity: 0,
     reconnectCount: 0,
     lastError: '',
@@ -53,6 +54,8 @@ function createRoomSession(roomIdInput = ''): RoomSessionState {
     danmuWindowVisible: false,
     streamer: null,
     topContributors: [],
+    openLive: null,
+    openLiveDebugRecords: [],
   }
 }
 
@@ -246,6 +249,22 @@ export class RoomManager {
         wsLatency: latency,
       })
     }))
+    this.cleanups.push(eventBus.on('OPENLIVE_STATUS', ({ roomKey, state }) => {
+      this.updateRoom(roomKey, {
+        openLive: state,
+      })
+    }))
+    this.cleanups.push(eventBus.on('OPENLIVE_DEBUG', ({ roomKey, record }) => {
+      const room = this.rooms[roomKey]
+      if (!room) {
+        return
+      }
+
+      const nextRecords = [record, ...room.openLiveDebugRecords].slice(0, 80)
+      this.updateRoom(roomKey, {
+        openLiveDebugRecords: nextRecords,
+      })
+    }))
     this.cleanups.push(await windowBridge.listenDanmuReady(() => {
       this.emitSnapshot()
     }))
@@ -318,9 +337,11 @@ export class RoomManager {
       status: connection.status,
       statusText: connection.statusText,
       websocketState: connection.websocketState,
+      providerKind: connection.providerKind ?? this.rooms[roomKey]?.providerKind ?? 'public',
       reconnectCount: connection.reconnectCount,
       lastError: connection.error ?? '',
       connecting: connection.status === 'connecting' || connection.status === 'reconnecting',
+      openLive: connection.openLive ?? this.rooms[roomKey]?.openLive ?? null,
     })
   }
 
@@ -444,10 +465,27 @@ export class RoomManager {
       logInfo('rooms', `房间 ${inputRoomId} 连接流程已交给 ConnectionManager`)
     } catch (error) {
       const message = error instanceof Error ? error.message : '连接失败'
+      const shouldFallback = this.settings.liveProvider === 'open-live'
+      if (shouldFallback) {
+        try {
+          this.addMessage(roomKey, createSystemNotice(`OpenLive 连接失败，已回退到 Public WS：${message}`, 'warning', 'OPENLIVE_FALLBACK'))
+          await connectionManager.connect(roomKey, {
+            roomId: this.rooms[roomKey]?.resolvedRoomId ?? 0,
+            reconnectInterval: 5,
+            autoReconnect: this.settings.autoReconnect,
+            providerKind: 'public',
+          })
+          return
+        } catch (fallbackError) {
+          const fallbackMessage = fallbackError instanceof Error ? fallbackError.message : 'Public WS 回退失败'
+          logWarn('rooms', fallbackMessage)
+        }
+      }
       this.updateRoom(roomKey, {
         status: 'error',
         statusText: message,
         websocketState: 'CLOSED',
+        providerKind: this.settings.liveProvider,
         lastError: message,
         connecting: false,
       })
@@ -475,6 +513,7 @@ export class RoomManager {
       status: 'disconnected',
       statusText: '连接已断开',
       websocketState: 'CLOSED',
+      providerKind: room.providerKind,
       reconnectCount: 0,
       connecting: false,
       autoConnect: updateAutoConnect ? false : room.autoConnect,
