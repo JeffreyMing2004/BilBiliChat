@@ -1,9 +1,11 @@
 :root {
   color-scheme: dark;
   --bg-color: #0b0f17;
-  --bg-overlay: radial-gradient(circle at top left, rgba(88, 101, 242, 0.18), transparent 28%), radial-gradient(circle at right top, rgba(0, 174, 236, 0.16), transparent 22%), linear-gradient(180deg, #0a0d14 0%, #101522 45%, #0c111a 100%);
+  --bg-overlay:
+    radial-gradient(circle at top left, rgba(88, 101, 242, 0.18), transparent 28%),
+    radial-gradient(circle at right top, rgba(0, 174, 236, 0.16), transparent 22%),
+    linear-gradient(180deg, #0a0d14 0%, #101522 45%, #0c111a 100%);
   --panel-color: rgba(18, 24, 38, 0.74);
-  --panel-strong: rgba(22, 29, 45, 0.9);
   --panel-border: rgba(255, 255, 255, 0.08);
   --text-primary: #edf2ff;
   --text-secondary: #8fa0c6;
@@ -15,7 +17,11 @@
 .el-input__wrapper,
 .el-input-number,
 .el-tag,
-.el-message {
+.el-message,
+.el-drawer,
+.el-textarea__inner,
+.el-input-number__decrease,
+.el-input-number__increase {
   --el-color-primary: #4f8cff;
   --el-bg-color: rgba(24, 31, 45, 0.9);
   --el-bg-color-overlay: rgba(18, 24, 38, 0.96);

@@ -17,6 +17,7 @@ export type LiveSocketStatus = 'connecting' | 'connected' | 'reconnecting' | 'di
 interface LiveDanmuSocketOptions {
   roomId: number
   reconnectInterval: number
+  autoReconnect: boolean
   onStatus: (payload: {
     status: LiveSocketStatus
     statusText: string
@@ -136,8 +137,14 @@ export class LiveDanmuSocket {
         return
       }
 
-      logWarning('websocket', '连接断开，准备自动重连')
+      logWarning('websocket', '连接断开')
       this.rejectPendingConnect('连接已关闭')
+
+      if (!this.options.autoReconnect) {
+        this.emitStatus('disconnected', '连接断开，自动重连已关闭')
+        return
+      }
+
       this.scheduleReconnect('连接断开，准备自动重连')
     }
   }
