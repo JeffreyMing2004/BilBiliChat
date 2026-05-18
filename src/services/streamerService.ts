@@ -1,11 +1,20 @@
 import type { BilibiliRoomInfoResponse } from '../types/api'
+import { logDebug, logError, logInfo, logWarn } from '../core/logger/Logger'
 import type { StreamerProfile } from '../types/room'
+import { appFetch, isTauriRuntime } from '../utils/http'
 
 const ROOM_INFO_API = 'https://api.live.bilibili.com/xlive/web-room/v1/index/getInfoByRoom'
+
+function buildRoomInfoUrl(roomId: number): string {
+  return `${ROOM_INFO_API}?room_id=${encodeURIComponent(String(roomId))}`
+}
 
 function normalizeStreamerServiceError(error: unknown, fallback: string): Error {
   if (error instanceof Error) {
     const message = error.message.trim()
+    if (/^-?\d+$/.test(message)) {
+      return new Error(`${fallback}：Tauri 原生 HTTP 返回底层网络错误码 ${message}，这通常不是接口 JSON 头问题，而是 macOS 网络栈或 TLS/连接策略异常`)
+    }
     if (message === 'Load failed' || message === 'Failed to fetch') {
       return new Error(`${fallback}：Bilibili 主播信息接口请求失败，请检查当前网络、代理或系统 WebView 连接状态`)
     }
@@ -21,41 +30,54 @@ async function requestJson<T>(url: string): Promise<T> {
 
   for (let attempt = 0; attempt < 2; attempt += 1) {
     try {
-      const response = await fetch(url, {
+      logDebug('service', `主播信息请求开始：attempt=${attempt + 1} runtime=${isTauriRuntime() ? 'tauri-http' : 'web-fetch'} url=${url}`)
+      const response = await appFetch(url, {
         headers: {
           Accept: 'application/json',
         },
+        method: 'GET',
+        timeout: 10_000,
       })
+
+      logDebug('service', `主播信息响应已返回：status=${response.status} ok=${String(response.ok)} url=${url}`)
 
       if (!response.ok) {
         throw new Error(`请求失败: ${response.status} ${response.statusText}`)
       }
 
-      return (await response.json()) as T
+      const json = (await response.json()) as T
+      logDebug('service', `主播信息 JSON 解析成功：url=${url}`)
+      return json
     } catch (error) {
       lastError = error
+      const message = error instanceof Error ? error.message : '请求异常'
+      logWarn('service', `主播信息请求失败：attempt=${attempt + 1} url=${url} error=${message}`)
       if (attempt === 1) {
         break
       }
     }
   }
 
-  throw normalizeStreamerServiceError(lastError, '主播信息获取失败')
+  const normalizedError = normalizeStreamerServiceError(lastError, '主播信息获取失败')
+  logError('service', `主播信息最终失败：url=${url} error=${normalizedError.message}`)
+  throw normalizedError
 }
 
 export async function fetchStreamerProfile(roomId: number): Promise<StreamerProfile> {
-  const result = await requestJson<BilibiliRoomInfoResponse>(
-    `${ROOM_INFO_API}?room_id=${encodeURIComponent(String(roomId))}`,
-  )
+  const requestUrl = buildRoomInfoUrl(roomId)
+  logInfo('service', `开始拉取主播资料：roomId=${roomId} url=${requestUrl}`)
+  const result = await requestJson<BilibiliRoomInfoResponse>(requestUrl)
 
   const roomInfo = result.data?.room_info
   const anchorInfo = result.data?.anchor_info
   const baseInfo = anchorInfo?.base_info
 
   if (result.code !== 0 || !roomInfo) {
+    logWarn('service', `主播信息接口返回异常：roomId=${roomId} code=${result.code} message=${String(result.message || 'unknown')}`)
     throw new Error(result.message || '主播信息获取失败')
   }
 
+  logInfo('service', `主播资料拉取成功：roomId=${roomId} uid=${baseInfo?.uid ?? 0} uname=${baseInfo?.uname ?? '主播未命名'}`)
   return {
     roomId: roomInfo.room_id ?? roomId,
     shortId: roomInfo.short_id ?? 0,

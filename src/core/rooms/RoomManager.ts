@@ -1,7 +1,7 @@
 import { connectionManager } from '../connection/ConnectionManager'
 import { eventBus } from '../events/EventBus'
 import { createSystemNotice } from '../message/MessageFactory'
-import { logInfo, logWarn } from '../logger/Logger'
+import { logDebug, logInfo, logWarn } from '../logger/Logger'
 import { performanceMonitor } from '../performance/PerformanceMonitor'
 import { pluginManager } from '../plugins/PluginManager'
 import { recoveryManager } from '../recovery/RecoveryManager'
@@ -186,6 +186,27 @@ export class RoomManager {
     void windowBridge.emitRoomsSnapshot(this.createSnapshot())
   }
 
+  private createOpenLiveStreamer(roomKey: string, state: NonNullable<RoomSessionState['openLive']>): RoomSessionState['streamer'] {
+    const current = this.rooms[roomKey]?.streamer
+
+    return {
+      roomId: state.anchorRoomId ?? current?.roomId ?? 0,
+      shortId: current?.shortId ?? 0,
+      uid: state.anchorUid ?? current?.uid ?? 0,
+      name: state.anchorName || current?.name || 'OpenLive 主播',
+      avatar: state.anchorAvatar || current?.avatar || '',
+      cover: current?.cover ?? '',
+      keyframe: current?.keyframe ?? '',
+      title: current?.title ?? 'OpenLive 直播间',
+      areaName: current?.areaName ?? '直播',
+      parentAreaName: current?.parentAreaName ?? '直播',
+      liveStatus: current?.liveStatus ?? 1,
+      fansCount: current?.fansCount ?? 0,
+      guardCount: current?.guardCount ?? 0,
+      onlineCount: current?.onlineCount ?? 0,
+    }
+  }
+
   private addMessage(roomKey: string, message: LiveMessage, sync = true): void {
     const room = this.rooms[roomKey]
     if (!room) {
@@ -252,6 +273,8 @@ export class RoomManager {
     this.cleanups.push(eventBus.on('OPENLIVE_STATUS', ({ roomKey, state }) => {
       this.updateRoom(roomKey, {
         openLive: state,
+        resolvedRoomId: state?.anchorRoomId ?? this.rooms[roomKey]?.resolvedRoomId ?? null,
+        streamer: state ? this.createOpenLiveStreamer(roomKey, state) : this.rooms[roomKey]?.streamer ?? null,
       })
     }))
     this.cleanups.push(eventBus.on('OPENLIVE_DEBUG', ({ roomKey, record }) => {
@@ -425,7 +448,10 @@ export class RoomManager {
     }
 
     const inputRoomId = room.roomIdInput.trim()
-    if (!inputRoomId) {
+    logInfo('rooms', `开始连接房间：roomKey=${roomKey} input=${inputRoomId || '(empty)'} provider=${this.settings.liveProvider}`)
+    const isOpenLive = this.settings.liveProvider === 'open-live'
+    if (!inputRoomId && !isOpenLive) {
+      logWarn('rooms', `连接已取消：roomKey=${roomKey} 输入房间号为空`)
       throw new Error('请输入直播间号')
     }
 
@@ -441,25 +467,62 @@ export class RoomManager {
     })
     this.persistRooms()
 
+    if (isOpenLive) {
+      try {
+        logDebug('rooms', `OpenLive 模式直接启动官方会话：roomKey=${roomKey} identityCodeLength=${this.settings.openLiveIdentityCode.trim().length}`)
+        await connectionManager.connect(roomKey, {
+          roomId: this.rooms[roomKey]?.resolvedRoomId ?? 0,
+          reconnectInterval: 5,
+          autoReconnect: this.settings.autoReconnect,
+          providerKind: 'open-live',
+          openLiveIdentityCode: this.settings.openLiveIdentityCode,
+        })
+        logInfo('rooms', `OpenLive 连接流程已交给 ConnectionManager：roomKey=${roomKey}`)
+        return
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'OpenLive 连接失败'
+        this.updateRoom(roomKey, {
+          status: 'error',
+          statusText: message,
+          websocketState: 'CLOSED',
+          providerKind: 'open-live',
+          lastError: message,
+          connecting: false,
+        })
+        this.addMessage(roomKey, createSystemNotice(`OpenLive 连接失败：${message}`, 'error', 'CONNECT_ERROR'))
+        logWarn('rooms', message)
+        throw error
+      } finally {
+        this.updateRoom(roomKey, {
+          connecting: false,
+        })
+      }
+    }
+
     try {
+      logDebug('rooms', `准备解析真实房间号：roomKey=${roomKey} input=${inputRoomId}`)
       const resolvedRoomId = await resolveRoomId(inputRoomId).catch((error) => {
         const message = error instanceof Error ? error.message : '直播间号解析失败'
         throw new Error(`真实房间号解析失败：${message}`)
       })
+      logInfo('rooms', `真实房间号解析完成：roomKey=${roomKey} input=${inputRoomId} resolved=${resolvedRoomId}`)
       this.updateRoom(roomKey, {
         resolvedRoomId,
         statusText: '真实房间号解析成功',
       })
 
+      logDebug('rooms', `准备拉取主播资料：roomKey=${roomKey} resolved=${resolvedRoomId}`)
       const profile = await fetchStreamerProfile(resolvedRoomId).catch((error) => {
         const message = error instanceof Error ? error.message : '主播信息获取失败'
         throw new Error(`主播资料加载失败：${message}`)
       })
+      logInfo('rooms', `主播资料加载完成：roomKey=${roomKey} resolved=${resolvedRoomId} streamer=${profile.name}`)
       this.updateRoom(roomKey, {
         streamer: profile,
         onlineCount: profile.onlineCount,
       })
 
+      logDebug('rooms', `准备交给 ConnectionManager：roomKey=${roomKey} resolved=${resolvedRoomId} provider=${this.settings.liveProvider}`)
       await connectionManager.connect(roomKey, {
         roomId: resolvedRoomId,
         reconnectInterval: 5,
@@ -474,6 +537,7 @@ export class RoomManager {
       const shouldFallback = this.settings.liveProvider === 'open-live'
       if (shouldFallback) {
         try {
+          logWarn('rooms', `OpenLive 失败，准备回退 Public WS：roomKey=${roomKey} resolved=${this.rooms[roomKey]?.resolvedRoomId ?? 0} error=${message}`)
           this.addMessage(roomKey, createSystemNotice(`OpenLive 连接失败，已回退到 Public WS：${message}`, 'warning', 'OPENLIVE_FALLBACK'))
           await connectionManager.connect(roomKey, {
             roomId: this.rooms[roomKey]?.resolvedRoomId ?? 0,
@@ -481,6 +545,7 @@ export class RoomManager {
             autoReconnect: this.settings.autoReconnect,
             providerKind: 'public',
           })
+          logInfo('rooms', `Public WS 回退成功：roomKey=${roomKey}`)
           return
         } catch (fallbackError) {
           const fallbackMessage = fallbackError instanceof Error ? fallbackError.message : 'Public WS 回退失败'

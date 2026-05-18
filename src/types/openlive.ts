@@ -13,6 +13,8 @@ export interface OpenLiveStateSnapshot {
   statusText: string
   anchorRoomId: number | null
   anchorName: string
+  anchorUid: number | null
+  anchorAvatar: string
   gameId: string
   websocketUrl: string
   websocketState: string

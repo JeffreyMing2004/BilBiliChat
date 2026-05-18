@@ -385,6 +385,8 @@ function createInitialState(options: LiveProviderOptions): OpenLiveStateSnapshot
     statusText: '等待启动 OpenLive',
     anchorRoomId: null,
     anchorName: '',
+    anchorUid: null,
+    anchorAvatar: '',
     gameId: '',
     websocketUrl: '',
     websocketState: 'CLOSED',
@@ -538,6 +540,8 @@ export class OpenLiveProvider implements LiveProvider {
       this.emitState({
         anchorRoomId: data.anchor_info.room_id,
         anchorName: data.anchor_info.uname,
+        anchorUid: data.anchor_info.uid,
+        anchorAvatar: data.anchor_info.uface,
         gameId: data.game_info.game_id,
         websocketUrl: this.websocketUrl,
         tokenExpiresAt: parseTokenExpiresAt(data.websocket_info.auth_body),

@@ -273,6 +273,7 @@ pub fn run() {
         }
       }))
       .plugin(tauri_plugin_deep_link::init())
+      .plugin(tauri_plugin_http::init())
       .plugin(tauri_plugin_shell::init())
       .plugin(tauri_plugin_process::init())
       .plugin(tauri_plugin_updater::Builder::new().build());

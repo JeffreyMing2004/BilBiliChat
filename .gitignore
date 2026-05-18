@@ -13,7 +13,9 @@ dist-ssr
 *.local
 .vscode
 .env
+.env.example
 
+.js-demo/*
 
 # Editor directories and files
 .vscode/*

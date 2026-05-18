@@ -142,6 +142,8 @@ VITE_BILIBILI_OPENLIVE_ACCESS_KEY_SECRET=
 VITE_BILIBILI_OPENLIVE_API_BASE=
 ```
 
+也可以直接复制仓库中的 `.env.example` 为 `.env` 后再填写真实配置。
+
 OpenLive 详细文档见 [docs/openlive/README.md](./docs/openlive/README.md)。
 
 ## 项目结构
