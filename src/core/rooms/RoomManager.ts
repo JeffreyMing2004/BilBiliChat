@@ -13,7 +13,7 @@ import { fetchStreamerProfile } from '../../services/streamerService'
 import type { AppSettings } from '../../types/settings'
 import type { ConnectionStatusPayload } from '../../types/websocket'
 import type { LiveMessage } from '../../types/message'
-import type { PersistedRoomSession, RoomSessionState } from '../../types/room'
+import type { PersistedRoomSession, RoomSessionState, StreamerProfile } from '../../types/room'
 import type { ActiveRoomEvent, RoomMessageEvent, RoomPatchEvent, RoomSyncSnapshot } from '../../windows/shared/types'
 
 interface RoomManagerSnapshot {
@@ -201,6 +201,27 @@ export class RoomManager {
       areaName: current?.areaName ?? '直播',
       parentAreaName: current?.parentAreaName ?? '直播',
       liveStatus: current?.liveStatus ?? 1,
+      fansCount: current?.fansCount ?? 0,
+      guardCount: current?.guardCount ?? 0,
+      onlineCount: current?.onlineCount ?? 0,
+    }
+  }
+
+  private createFallbackStreamerProfile(roomKey: string, resolvedRoomId: number): StreamerProfile {
+    const current = this.rooms[roomKey]?.streamer
+
+    return {
+      roomId: resolvedRoomId,
+      shortId: current?.shortId ?? 0,
+      uid: current?.uid ?? 0,
+      name: current?.name || `直播间 ${resolvedRoomId}`,
+      avatar: current?.avatar ?? '',
+      cover: current?.cover ?? '',
+      keyframe: current?.keyframe ?? '',
+      title: current?.title || '主播资料接口受限',
+      areaName: current?.areaName ?? '直播',
+      parentAreaName: current?.parentAreaName ?? '直播',
+      liveStatus: current?.liveStatus ?? 0,
       fansCount: current?.fansCount ?? 0,
       guardCount: current?.guardCount ?? 0,
       onlineCount: current?.onlineCount ?? 0,
@@ -512,10 +533,25 @@ export class RoomManager {
       })
 
       logDebug('rooms', `准备拉取主播资料：roomKey=${roomKey} resolved=${resolvedRoomId}`)
-      const profile = await fetchStreamerProfile(resolvedRoomId).catch((error) => {
-        const message = error instanceof Error ? error.message : '主播信息获取失败'
-        throw new Error(`主播资料加载失败：${message}`)
-      })
+      let profile: StreamerProfile
+      try {
+        profile = await fetchStreamerProfile(resolvedRoomId)
+      } catch (error) {
+        const message = error instanceof Error ? error.message.trim() : '主播信息获取失败'
+        if (message === '-352') {
+          const degradedMessage = '主播资料接口受限，已降级继续连接'
+          logWarn('rooms', `${degradedMessage}：roomKey=${roomKey} resolved=${resolvedRoomId} code=-352`)
+          this.addMessage(roomKey, createSystemNotice(degradedMessage, 'warning', 'STREAMER_PROFILE_DEGRADED'))
+          this.updateRoom(roomKey, {
+            statusText: degradedMessage,
+          })
+          profile = this.createFallbackStreamerProfile(roomKey, resolvedRoomId)
+        } else {
+          throw new Error(`主播资料加载失败：${message}`, {
+            cause: error,
+          })
+        }
+      }
       logInfo('rooms', `主播资料加载完成：roomKey=${roomKey} resolved=${resolvedRoomId} streamer=${profile.name}`)
       this.updateRoom(roomKey, {
         streamer: profile,

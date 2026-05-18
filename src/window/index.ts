@@ -3,6 +3,7 @@ import { PhysicalPosition, PhysicalSize, getCurrentWindow } from '@tauri-apps/ap
 
 import { crashReporter } from '../core/crash/CrashReporter'
 import { recoveryManager } from '../core/recovery/RecoveryManager'
+import { useSettingsStore } from '../stores/settings'
 import { loadStorageItem, saveStorageItem, windowStateStorageKey } from '../settings'
 import type { AppSettings, WindowStateSnapshot } from '../types/settings'
 import { isMacOS } from '../utils/platform'
@@ -65,7 +66,7 @@ export async function initializeWindowState(): Promise<() => void> {
     void saveBounds()
   })
   const unlistenClose = await currentWindow.onCloseRequested(async (event) => {
-    const settingsStore = (await import('../stores/settings')).useSettingsStore()
+    const settingsStore = useSettingsStore()
 
     if (windowLabel === 'main' && settingsStore.settings.minimizeToTray) {
       event.preventDefault()

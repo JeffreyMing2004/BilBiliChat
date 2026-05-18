@@ -67,11 +67,23 @@ export class ConnectionManager {
               roomKey,
               connection: { ...connectionState },
             })
+            eventBus.emit('CONNECT', {
+              roomKey,
+              connection: { ...connectionState },
+            })
+            return
           }
-          eventBus.emit('CONNECT', {
-            roomKey,
-            connection: { ...connectionState },
-          })
+
+          if (payload.status === 'connecting' || payload.status === 'reconnecting') {
+            eventBus.emit('RECONNECT', {
+              roomKey,
+              notice: {
+                reconnectCount: payload.reconnectCount,
+                reconnectInSeconds: 0,
+                reason: payload.statusText,
+              },
+            })
+          }
         },
         onPopularity: (popularity) => {
           session.popularity = popularity

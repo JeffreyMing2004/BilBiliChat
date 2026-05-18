@@ -133,11 +133,13 @@ export class LiveDanmuSocket {
     }
 
     this.socket.onerror = () => {
-      logError('websocket', 'WebSocket 连接异常')
-      this.emitStatus('error', 'WebSocket 连接异常', 'WebSocket 连接异常')
+      const state = readyStateText(this.socket)
+      const message = `WebSocket 连接异常（state=${state} authenticated=${String(this.isAuthenticated)} roomId=${this.options.roomId}）`
+      logError('websocket', message)
+      this.emitStatus('error', message, message)
     }
 
-    this.socket.onclose = () => {
+    this.socket.onclose = (event) => {
       this.clearHeartbeatTimer()
       this.clearAuthTimeoutTimer()
       this.socket = null
@@ -146,7 +148,10 @@ export class LiveDanmuSocket {
         return
       }
 
-      logWarning('websocket', '连接断开')
+      logWarning(
+        'websocket',
+        `连接断开（code=${event.code} reason=${event.reason || 'none'} clean=${String(event.wasClean)} authenticated=${String(this.isAuthenticated)} roomId=${this.options.roomId}）`,
+      )
       this.rejectPendingConnect('连接已关闭')
 
       if (!this.options.autoReconnect) {
