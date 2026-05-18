@@ -1,0 +1,60 @@
+<svg width="1280" height="640" viewBox="0 0 1280 640" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="92" y1="48" x2="1114" y2="640" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#07111F"/>
+      <stop offset="0.55" stop-color="#0B1325"/>
+      <stop offset="1" stop-color="#080B15"/>
+    </linearGradient>
+    <radialGradient id="glowLeft" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(236 176) rotate(41.7) scale(388 234)">
+      <stop stop-color="#00D1FF" stop-opacity="0.34"/>
+      <stop offset="1" stop-color="#00D1FF" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glowRight" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(1038 114) rotate(140.4) scale(356 208)">
+      <stop stop-color="#FB7299" stop-opacity="0.28"/>
+      <stop offset="1" stop-color="#FB7299" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="neon" x1="248" y1="118" x2="1062" y2="480" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#00D1FF"/>
+      <stop offset="0.5" stop-color="#6B7CFF"/>
+      <stop offset="1" stop-color="#FB7299"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1280" height="640" rx="32" fill="url(#bg)"/>
+  <rect width="1280" height="640" rx="32" fill="url(#glowLeft)"/>
+  <rect width="1280" height="640" rx="32" fill="url(#glowRight)"/>
+
+  <circle cx="1130" cy="516" r="162" stroke="#00D1FF" stroke-opacity="0.12" stroke-width="2"/>
+  <circle cx="1080" cy="466" r="112" stroke="#FB7299" stroke-opacity="0.18" stroke-width="2"/>
+  <circle cx="148" cy="522" r="136" stroke="#6B7CFF" stroke-opacity="0.16" stroke-width="2"/>
+
+  <g opacity="0.9">
+    <rect x="104" y="108" width="710" height="424" rx="28" fill="#0E1727" fill-opacity="0.72" stroke="url(#neon)" stroke-opacity="0.28" stroke-width="2"/>
+    <rect x="128" y="138" width="662" height="44" rx="16" fill="#111C30"/>
+    <circle cx="156" cy="160" r="7" fill="#FF5F57"/>
+    <circle cx="180" cy="160" r="7" fill="#FEBC2E"/>
+    <circle cx="204" cy="160" r="7" fill="#28C840"/>
+    <rect x="128" y="206" width="176" height="302" rx="18" fill="#0A1221" stroke="#25344F"/>
+    <rect x="326" y="206" width="440" height="180" rx="18" fill="#0A1221" stroke="#25344F"/>
+    <rect x="326" y="404" width="138" height="104" rx="18" fill="#0A1221" stroke="#25344F"/>
+    <rect x="484" y="404" width="138" height="104" rx="18" fill="#0A1221" stroke="#25344F"/>
+    <rect x="642" y="404" width="124" height="104" rx="18" fill="#0A1221" stroke="#25344F"/>
+    <rect x="350" y="230" width="392" height="132" rx="22" fill="url(#neon)" fill-opacity="0.08" stroke="url(#neon)" stroke-opacity="0.4"/>
+    <path d="M370 328C414 290 446 316 486 294C526 272 556 226 616 246C676 266 682 324 730 304" stroke="#00D1FF" stroke-width="6" stroke-linecap="round"/>
+    <path d="M144 246H238" stroke="#00D1FF" stroke-opacity="0.72" stroke-width="10" stroke-linecap="round"/>
+    <path d="M144 282H254" stroke="#FB7299" stroke-opacity="0.72" stroke-width="10" stroke-linecap="round"/>
+    <path d="M144 318H214" stroke="#6B7CFF" stroke-opacity="0.72" stroke-width="10" stroke-linecap="round"/>
+  </g>
+
+  <g>
+    <text x="854" y="238" fill="white" font-family="Inter, Arial, sans-serif" font-size="72" font-weight="800">BilBiliChat</text>
+    <text x="854" y="286" fill="#97AED0" font-family="Inter, Arial, sans-serif" font-size="21" font-weight="600" letter-spacing="0.08em">PROFESSIONAL BILIBILI OBS DANMAKU DESKTOP CLIENT</text>
+    <text x="854" y="352" fill="#E6F1FF" font-family="Inter, Arial, sans-serif" font-size="28" font-weight="700">OpenLive • Overlay Studio • Plugin System</text>
+    <text x="854" y="398" fill="#8DA4C4" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="500">Tauri 2.x • Vue 3 • TypeScript • Rust • OBS Overlay</text>
+  </g>
+
+  <rect x="854" y="444" width="210" height="52" rx="26" fill="#0D1A2F" stroke="#00D1FF" stroke-opacity="0.38"/>
+  <rect x="1084" y="444" width="124" height="52" rx="26" fill="#151225" stroke="#FB7299" stroke-opacity="0.4"/>
+  <text x="894" y="476" fill="#DDF7FF" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="700">OBS Console</text>
+  <text x="1116" y="476" fill="#FFD7E6" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="700">Neon UI</text>
+</svg>

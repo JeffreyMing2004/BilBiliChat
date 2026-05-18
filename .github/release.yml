@@ -1,0 +1,47 @@
+changelog:
+  exclude:
+    labels:
+      - ignore-for-release
+      - duplicate
+      - invalid
+      - wontfix
+  categories:
+    - title: OpenLive
+      labels:
+        - openlive
+        - bilibili-openlive
+    - title: Overlay Studio
+      labels:
+        - overlay
+        - overlay-studio
+        - obs
+    - title: Plugin System
+      labels:
+        - plugin
+        - sdk
+    - title: Desktop Runtime
+      labels:
+        - tauri
+        - rust
+        - window
+        - updater
+    - title: UI And UX
+      labels:
+        - ui
+        - ux
+        - design
+    - title: Performance And Stability
+      labels:
+        - performance
+        - stability
+        - crash
+        - recovery
+    - title: Documentation
+      labels:
+        - documentation
+        - readme
+    - title: Other Changes
+      labels:
+        - enhancement
+        - refactor
+        - chore

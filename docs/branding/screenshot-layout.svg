@@ -1,0 +1,37 @@
+<svg width="1600" height="960" viewBox="0 0 1600 960" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="120" y1="48" x2="1460" y2="960" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#09111D"/>
+      <stop offset="1" stop-color="#0B1526"/>
+    </linearGradient>
+    <linearGradient id="card" x1="200" y1="160" x2="1390" y2="780" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#00D1FF"/>
+      <stop offset="0.5" stop-color="#6B7CFF"/>
+      <stop offset="1" stop-color="#FB7299"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1600" height="960" rx="40" fill="url(#bg)"/>
+  <text x="88" y="96" fill="white" font-family="Inter, Arial, sans-serif" font-size="38" font-weight="800">README Screenshot Layout</text>
+  <text x="88" y="132" fill="#96A8C6" font-family="Inter, Arial, sans-serif" font-size="20" font-weight="500">Main Console • Overlay • Overlay Studio • Settings • Multi Window</text>
+
+  <rect x="88" y="176" width="912" height="456" rx="28" fill="#0E1728" stroke="url(#card)" stroke-opacity="0.34" stroke-width="2"/>
+  <text x="126" y="228" fill="#E6F2FF" font-family="Inter, Arial, sans-serif" font-size="30" font-weight="800">01 · Main Console</text>
+  <text x="126" y="266" fill="#90A7C8" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="500">Sidebar navigation, room dashboard, OBS-style control surface</text>
+
+  <rect x="1032" y="176" width="480" height="220" rx="28" fill="#0E1728" stroke="#00D1FF" stroke-opacity="0.34" stroke-width="2"/>
+  <text x="1068" y="228" fill="#E6F2FF" font-family="Inter, Arial, sans-serif" font-size="28" font-weight="800">02 · Overlay Window</text>
+  <text x="1068" y="266" fill="#90A7C8" font-family="Inter, Arial, sans-serif" font-size="17" font-weight="500">Transparent OBS output, topbar, status bar, danmaku cards</text>
+
+  <rect x="1032" y="428" width="480" height="220" rx="28" fill="#0E1728" stroke="#FB7299" stroke-opacity="0.34" stroke-width="2"/>
+  <text x="1068" y="480" fill="#E6F2FF" font-family="Inter, Arial, sans-serif" font-size="28" font-weight="800">03 · Overlay Studio</text>
+  <text x="1068" y="518" fill="#90A7C8" font-family="Inter, Arial, sans-serif" font-size="17" font-weight="500">Preset sidebar, live stage preview, drag and styling controls</text>
+
+  <rect x="88" y="672" width="690" height="200" rx="28" fill="#0E1728" stroke="#6B7CFF" stroke-opacity="0.34" stroke-width="2"/>
+  <text x="124" y="724" fill="#E6F2FF" font-family="Inter, Arial, sans-serif" font-size="28" font-weight="800">04 · Settings System</text>
+  <text x="124" y="762" fill="#90A7C8" font-family="Inter, Arial, sans-serif" font-size="17" font-weight="500">OpenLive source switch, updater channel, overlay controls, sync actions</text>
+
+  <rect x="822" y="672" width="690" height="200" rx="28" fill="#0E1728" stroke="#00D1FF" stroke-opacity="0.34" stroke-width="2"/>
+  <text x="858" y="724" fill="#E6F2FF" font-family="Inter, Arial, sans-serif" font-size="28" font-weight="800">05 · Multi Window</text>
+  <text x="858" y="762" fill="#90A7C8" font-family="Inter, Arial, sans-serif" font-size="17" font-weight="500">Main, Settings, Login, Danmu, Overlay Studio, Debug, Crash Center</text>
+</svg>

@@ -1,0 +1,35 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="64" y1="48" x2="448" y2="464" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0B1325"/>
+      <stop offset="1" stop-color="#081018"/>
+    </linearGradient>
+    <linearGradient id="stroke" x1="128" y1="96" x2="392" y2="416" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#00D1FF"/>
+      <stop offset="0.5" stop-color="#7C5CFF"/>
+      <stop offset="1" stop-color="#FB7299"/>
+    </linearGradient>
+    <filter id="glow" x="0" y="0" width="512" height="512" filterUnits="userSpaceOnUse">
+      <feGaussianBlur stdDeviation="12" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <rect x="28" y="28" width="456" height="456" rx="136" fill="url(#bg)"/>
+  <rect x="36" y="36" width="440" height="440" rx="128" stroke="url(#stroke)" stroke-opacity="0.24" stroke-width="2"/>
+
+  <g filter="url(#glow)">
+    <path d="M172 126L214 172" stroke="url(#stroke)" stroke-width="16" stroke-linecap="round"/>
+    <path d="M340 126L298 172" stroke="url(#stroke)" stroke-width="16" stroke-linecap="round"/>
+    <path d="M156 184C156 166.327 170.327 152 188 152H324C341.673 152 356 166.327 356 184V318C356 335.673 341.673 350 324 350H260L210 386V350H188C170.327 350 156 335.673 156 318V184Z" fill="#FFFFFF" fill-opacity="0.02"/>
+    <path d="M156 184C156 166.327 170.327 152 188 152H324C341.673 152 356 166.327 356 184V318C356 335.673 341.673 350 324 350H260L210 386V350H188C170.327 350 156 335.673 156 318V184Z" stroke="url(#stroke)" stroke-width="18" stroke-linejoin="round"/>
+    <circle cx="220" cy="240" r="18" fill="#00D1FF"/>
+    <circle cx="292" cy="240" r="18" fill="#FB7299"/>
+    <path d="M202 298H310" stroke="url(#stroke)" stroke-width="16" stroke-linecap="round"/>
+    <path d="M398 186C422.301 210.301 436 243.26 436 277.629C436 311.997 422.301 344.956 398 369.257" stroke="#00D1FF" stroke-opacity="0.72" stroke-width="10" stroke-linecap="round"/>
+    <path d="M114 186C89.699 210.301 76 243.26 76 277.629C76 311.997 89.699 344.956 114 369.257" stroke="#FB7299" stroke-opacity="0.72" stroke-width="10" stroke-linecap="round"/>
+  </g>
+</svg>
