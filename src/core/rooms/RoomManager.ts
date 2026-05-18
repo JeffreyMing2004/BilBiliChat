@@ -442,13 +442,19 @@ export class RoomManager {
     this.persistRooms()
 
     try {
-      const resolvedRoomId = await resolveRoomId(inputRoomId)
+      const resolvedRoomId = await resolveRoomId(inputRoomId).catch((error) => {
+        const message = error instanceof Error ? error.message : '直播间号解析失败'
+        throw new Error(`真实房间号解析失败：${message}`)
+      })
       this.updateRoom(roomKey, {
         resolvedRoomId,
         statusText: '真实房间号解析成功',
       })
 
-      const profile = await fetchStreamerProfile(resolvedRoomId)
+      const profile = await fetchStreamerProfile(resolvedRoomId).catch((error) => {
+        const message = error instanceof Error ? error.message : '主播信息获取失败'
+        throw new Error(`主播资料加载失败：${message}`)
+      })
       this.updateRoom(roomKey, {
         streamer: profile,
         onlineCount: profile.onlineCount,

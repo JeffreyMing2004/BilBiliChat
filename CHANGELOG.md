@@ -15,6 +15,7 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ### Fixed
 - 持续修复多窗口、macOS 原生窗口行为与更新提示细节问题。
+- 修复 Tauri/WebKit 环境下房间初始化请求偶发只报 `Load failed` 的问题；房间号解析与主播资料加载现在会自动重试，并输出可定位的网络错误说明。
 
 ### Performance
 - 持续优化 Overlay 长时间运行与消息渲染稳定性。
