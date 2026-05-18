@@ -4,9 +4,8 @@ import type { DanmuConfig } from '../types/danmu'
 
 const DEFAULT_CONFIG: DanmuConfig = {
   roomId: '',
-  autoConnect: false,
-  maxMessages: 300,
   reconnectInterval: 5,
+  maxMessages: 300,
 }
 
 const store = new LazyStore('settings.json', {

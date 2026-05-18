@@ -6,62 +6,42 @@ export type ConnectionStatus =
   | 'disconnected'
   | 'error'
 
-export type DanmuMessageType = 'danmu' | 'gift' | 'entry' | 'superChat' | 'system'
+export type DanmuMessageType = 'danmu' | 'gift' | 'superChat' | 'entry' | 'system'
 
 export interface DanmuMessageItem {
   id: string
   type: DanmuMessageType
   username: string
-  userColor: string
   content: string
+  summary: string
   timestamp: string
   rawCommand: string
   price?: number
-  giftName?: string
-  giftCount?: number
 }
 
 export interface DanmuConfig {
   roomId: string
-  autoConnect: boolean
-  maxMessages: number
   reconnectInterval: number
-}
-
-export interface LiveRoomInfo {
-  roomId: number
-  shortId: number
-  title: string
-  anchorName: string
-  cover: string
-  liveStatus: number
-}
-
-export interface DanmuHost {
-  host: string
-  port: number
-  wssPort: number
-}
-
-export interface DanmuServerConfig {
-  token: string
-  hostList: DanmuHost[]
+  maxMessages: number
 }
 
 export interface StatusSnapshot {
   roomId: string
   resolvedRoomId: number | null
-  title: string
-  anchorName: string
-  popularity: number
-  currentHost: string
   status: ConnectionStatus
   statusText: string
+  websocketState: string
+  popularity: number
+  reconnectCount: number
   lastError: string
 }
 
-export interface BilibiliCommandPayload {
+export interface RawDanmuCommand {
   cmd?: string
   data?: Record<string, unknown>
   info?: unknown[]
+}
+
+export interface AuthReplyPayload {
+  code?: number
 }

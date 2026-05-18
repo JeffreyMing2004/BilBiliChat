@@ -1,39 +1,23 @@
 :root {
   color-scheme: dark;
-  --panel-bg: rgba(12, 17, 29, 0.72);
-  --panel-inner-bg: rgba(255, 255, 255, 0.04);
-  --border-color: rgba(255, 255, 255, 0.08);
-  --text-primary: #edf3ff;
-  --text-secondary: #8fa0c6;
+  --bg-color: #101217;
+  --panel-color: #181c23;
+  --panel-border: #2a313c;
+  --text-primary: #f5f7fa;
+  --text-secondary: #9aa4b2;
 }
 
 .el-button,
 .el-input__wrapper,
-.el-input-number,
-.el-switch,
 .el-tag,
-.el-drawer__header,
-.el-drawer__body,
 .el-message {
-  --el-color-primary: #5ea0ff;
-  --el-bg-color: rgba(17, 24, 39, 0.82);
-  --el-bg-color-overlay: rgba(15, 21, 33, 0.96);
-  --el-fill-color-blank: rgba(255, 255, 255, 0.02);
-  --el-fill-color-light: rgba(255, 255, 255, 0.03);
-  --el-border-color: rgba(255, 255, 255, 0.08);
-  --el-text-color-primary: #edf3ff;
-  --el-text-color-regular: #d0dbf6;
-  --el-text-color-secondary: #8fa0c6;
-}
-
-.el-input__wrapper,
-.el-input-number,
-.el-button,
-.el-drawer,
-.el-message {
-  border-radius: 14px;
-}
-
-.el-drawer {
-  background: rgba(10, 14, 24, 0.98);
+  --el-color-primary: #409eff;
+  --el-bg-color: #181c23;
+  --el-bg-color-overlay: #181c23;
+  --el-fill-color-blank: #181c23;
+  --el-fill-color-light: #1d232d;
+  --el-border-color: #2a313c;
+  --el-text-color-primary: #f5f7fa;
+  --el-text-color-regular: #d9dde3;
+  --el-text-color-secondary: #9aa4b2;
 }

@@ -1,92 +1,83 @@
 <template>
-  <section class="glass-panel side-card">
-    <div class="card-title-row">
-      <h2>直播间连接</h2>
-      <el-tag effect="plain">
-        WebSocket
-      </el-tag>
-    </div>
+  <section class="panel toolbar-panel">
+    <div class="toolbar-row">
+      <el-input
+        :model-value="store.config.roomId"
+        class="room-input"
+        placeholder="输入直播间号或短号"
+        size="large"
+        @update:model-value="onRoomIdChange"
+        @keyup.enter="store.connect()"
+      >
+        <template #prefix>
+          <el-icon><VideoPlay /></el-icon>
+        </template>
+      </el-input>
 
-    <el-form
-      label-position="top"
-      class="connection-form"
-    >
-      <el-form-item label="直播间号">
-        <el-input
-          :model-value="store.config.roomId"
-          placeholder="输入房间号或短号"
-          size="large"
-          @update:model-value="onRoomIdChange"
-        >
-          <template #prefix>
-            <el-icon><VideoPlay /></el-icon>
-          </template>
-        </el-input>
-      </el-form-item>
-
-      <el-form-item label="自动重连间隔（秒）">
-        <el-input-number
-          :model-value="store.config.reconnectInterval"
-          :min="3"
-          :max="30"
-          :step="1"
-          controls-position="right"
-          class="full-width"
-          @change="onReconnectChange"
-        />
-      </el-form-item>
-
-      <el-form-item>
-        <el-switch
-          :model-value="store.config.autoConnect"
-          inline-prompt
-          active-text="自动连接"
-          inactive-text="手动连接"
-          @change="onAutoConnectChange"
-        />
-      </el-form-item>
-    </el-form>
-
-    <div class="connection-actions">
       <el-button
         type="primary"
         size="large"
-        :disabled="!canConnect"
+        :loading="store.connecting"
+        :disabled="!store.canConnect"
         @click="store.connect()"
       >
-        <el-icon><Link /></el-icon>
-        连接直播间
+        连接
       </el-button>
+
       <el-button
         size="large"
         @click="store.disconnect()"
       >
-        <el-icon><SwitchButton /></el-icon>
-        断开连接
+        断开
       </el-button>
+
+      <el-tag
+        class="status-tag"
+        :type="tagType"
+        effect="dark"
+      >
+        {{ store.status.statusText }}
+      </el-tag>
+    </div>
+
+    <div class="toolbar-meta">
+      <span>输入房间号：{{ store.status.roomId || '--' }}</span>
+      <span>真实 room_id：{{ store.status.resolvedRoomId ?? '--' }}</span>
+      <span>重连间隔：{{ store.config.reconnectInterval }}s</span>
+    </div>
+
+    <div
+      v-if="store.status.lastError"
+      class="error-tip"
+    >
+      {{ store.status.lastError }}
     </div>
   </section>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { Link, SwitchButton, VideoPlay } from '@element-plus/icons-vue'
+import { VideoPlay } from '@element-plus/icons-vue'
 
 import { useDanmuStore } from '../stores/danmu'
 
 const store = useDanmuStore()
 
-const canConnect = computed(() => Boolean(store.config.roomId.trim()) && !store.groupedStatus.isBusy)
+const tagType = computed(() => {
+  switch (store.status.status) {
+    case 'connected':
+      return 'success'
+    case 'reconnecting':
+    case 'connecting':
+      return 'warning'
+    case 'error':
+      return 'danger'
+    default:
+      return 'info'
+  }
+})
 
 function onRoomIdChange(value: string): void {
   void store.updateConfig({ roomId: value })
-}
-
-function onReconnectChange(value: number | undefined): void {
-  void store.updateConfig({ reconnectInterval: Number(value ?? 5) })
-}
-
-function onAutoConnectChange(value: string | number | boolean): void {
-  void store.updateConfig({ autoConnect: Boolean(value) })
 }
 </script>

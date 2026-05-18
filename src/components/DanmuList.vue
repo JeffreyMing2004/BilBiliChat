@@ -1,29 +1,17 @@
 <template>
-  <section class="glass-panel danmu-panel">
-    <div class="card-title-row">
+  <section class="panel danmu-panel">
+    <div class="panel-head">
       <div>
         <h2>实时弹幕</h2>
-        <p class="subtle-text">
-          共 {{ store.messages.length }} 条消息
-        </p>
+        <p>收到 {{ store.messages.length }} 条消息</p>
       </div>
 
-      <div class="danmu-actions">
-        <el-button
-          size="small"
-          @click="scrollToBottom(true)"
-        >
-          <el-icon><RefreshRight /></el-icon>
-          到底部
-        </el-button>
-        <el-button
-          size="small"
-          @click="store.clearMessages()"
-        >
-          <el-icon><Delete /></el-icon>
-          清空
-        </el-button>
-      </div>
+      <el-button
+        size="small"
+        @click="store.clearMessages()"
+      >
+        清空
+      </el-button>
     </div>
 
     <div
@@ -31,6 +19,13 @@
       class="danmu-list"
       @scroll="handleScroll"
     >
+      <div
+        v-if="store.messages.length === 0"
+        class="empty-state"
+      >
+        点击连接后，这里会实时显示弹幕、礼物、SC 和进入直播间事件。
+      </div>
+
       <transition-group
         name="danmu-slide"
         tag="div"
@@ -42,43 +37,16 @@
           class="danmu-item"
           :data-type="item.type"
         >
-          <div class="message-meta">
-            <span class="message-time">{{ item.timestamp }}</span>
-            <span
-              class="message-user"
-              :style="{ color: item.userColor }"
-            >{{ item.username }}</span>
+          <div class="danmu-item-head">
+            <span class="danmu-time">{{ item.timestamp }}</span>
             <el-tag
-              v-if="item.type === 'gift'"
-              type="warning"
-              effect="dark"
-            >
-              礼物
-            </el-tag>
-            <el-tag
-              v-else-if="item.type === 'entry'"
-              type="info"
-              effect="dark"
-            >
-              进入
-            </el-tag>
-            <el-tag
-              v-else-if="item.type === 'superChat'"
-              type="danger"
-              effect="dark"
-            >
-              SC {{ item.price ?? 0 }}
-            </el-tag>
-            <el-tag
-              v-else-if="item.type === 'system'"
+              size="small"
               effect="plain"
             >
-              系统
+              {{ item.rawCommand }}
             </el-tag>
           </div>
-          <p class="message-content">
-            {{ item.content }}
-          </p>
+          <pre class="danmu-text">{{ item.summary }}</pre>
         </article>
       </transition-group>
     </div>
@@ -87,13 +55,12 @@
 
 <script setup lang="ts">
 import { nextTick, ref, watch } from 'vue'
-import { Delete, RefreshRight } from '@element-plus/icons-vue'
 
 import { useDanmuStore } from '../stores/danmu'
 
 const store = useDanmuStore()
-const listRef = ref<HTMLDivElement | null>(null)
-const autoScroll = ref(true)
+const listRef = ref<HTMLElement | null>(null)
+const shouldStickBottom = ref(true)
 
 function scrollToBottom(force = false): void {
   const element = listRef.value
@@ -102,9 +69,9 @@ function scrollToBottom(force = false): void {
     return
   }
 
-  const distanceToBottom = element.scrollHeight - element.scrollTop - element.clientHeight
+  const distance = element.scrollHeight - element.scrollTop - element.clientHeight
 
-  if (force || autoScroll.value || distanceToBottom < 60) {
+  if (force || shouldStickBottom.value || distance < 50) {
     element.scrollTo({
       top: element.scrollHeight,
       behavior: 'smooth',
@@ -119,7 +86,7 @@ function handleScroll(): void {
     return
   }
 
-  autoScroll.value = element.scrollHeight - element.scrollTop - element.clientHeight < 40
+  shouldStickBottom.value = element.scrollHeight - element.scrollTop - element.clientHeight < 40
 }
 
 watch(

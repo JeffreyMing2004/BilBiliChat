@@ -1,16 +1,16 @@
 <template>
-  <footer class="app-footer glass-panel">
+  <footer class="panel footer-panel">
     <div class="footer-item">
       <span>WebSocket 状态</span>
+      <strong>{{ status.websocketState }}</strong>
+    </div>
+    <div class="footer-item">
+      <span>连接状态</span>
       <strong>{{ status.status }}</strong>
     </div>
     <div class="footer-item">
-      <span>当前服务器节点</span>
-      <strong>{{ status.currentHost }}</strong>
-    </div>
-    <div class="footer-item">
-      <span>错误信息</span>
-      <strong>{{ status.lastError || '无' }}</strong>
+      <span>在线人数</span>
+      <strong>{{ status.popularity.toLocaleString('zh-CN') }}</strong>
     </div>
   </footer>
 </template>
