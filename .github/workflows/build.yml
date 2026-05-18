@@ -114,11 +114,41 @@ jobs:
       - name: Install Frontend Dependencies
         run: npm install
 
+      - name: Prepare Updater Signing Key
+        id: signing_key
+        shell: bash
+        env:
+          RAW_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          BASE64_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_BASE64 }}
+        run: |
+          KEY_PATH="$RUNNER_TEMP/tauri-updater.key"
+
+          if [[ -n "$BASE64_KEY" ]]; then
+            printf '%s' "$BASE64_KEY" | base64 --decode > "$KEY_PATH"
+          elif [[ -n "$RAW_KEY" ]]; then
+            cat > "$KEY_PATH" <<'EOF'
+          ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          EOF
+          else
+            echo "Missing signing key secret. Provide TAURI_SIGNING_PRIVATE_KEY or TAURI_SIGNING_PRIVATE_KEY_BASE64."
+            exit 1
+          fi
+
+          chmod 600 "$KEY_PATH"
+
+          if ! grep -q "minisign" "$KEY_PATH"; then
+            echo "Invalid updater private key format."
+            echo "Expected a minisign secret key file with comment header."
+            exit 1
+          fi
+
+          echo "path=$KEY_PATH" >> "$GITHUB_OUTPUT"
+
       - name: Build And Release Tauri App
         uses: tauri-apps/tauri-action@v0.6.2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ steps.signing_key.outputs.path }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           projectPath: .

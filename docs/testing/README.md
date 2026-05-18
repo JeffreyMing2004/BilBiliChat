@@ -15,6 +15,7 @@
 - [OpenLive 测试](./openlive.md)
 - [macOS 测试](./macos.md)
 - [Windows 测试](./windows.md)
+- [Release Signing](./release-signing.md)
 
 ## Beta 通过标准
 - `npm run lint` 通过
