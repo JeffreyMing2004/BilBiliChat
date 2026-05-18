@@ -169,6 +169,23 @@ fn close_app_window(app: AppHandle, label: String) -> Result<(), String> {
   window.close().map_err(|error| error.to_string())
 }
 
+#[tauri::command]
+fn frontend_log(level: String, scope: String, message: String) -> Result<(), String> {
+  if !cfg!(debug_assertions) {
+    return Ok(());
+  }
+
+  let formatted = format!("[frontend][{scope}][{level}] {message}");
+  match level.as_str() {
+    "error" => log::error!("{formatted}"),
+    "warn" => log::warn!("{formatted}"),
+    "debug" => log::debug!("{formatted}"),
+    _ => log::info!("{formatted}"),
+  }
+
+  Ok(())
+}
+
 #[cfg(debug_assertions)]
 fn setup_window_lifecycle_selftest(app: &tauri::App) {
   if std::env::var("BILBILICHAT_SELFTEST_WINDOWS").ok().as_deref() != Some("1") {
@@ -260,7 +277,7 @@ fn setup_tray(app: &tauri::App) -> tauri::Result<()> {
 pub fn run() {
   let mut builder = tauri::Builder::default();
   let log_level = if cfg!(debug_assertions) {
-    log::LevelFilter::Info
+    log::LevelFilter::Debug
   } else {
     log::LevelFilter::Off
   };
@@ -288,7 +305,8 @@ pub fn run() {
     .invoke_handler(tauri::generate_handler![
       open_app_window,
       close_app_window,
-      broadcast_window_event
+      broadcast_window_event,
+      frontend_log
     ])
     .setup(|app| {
       #[cfg(desktop)]

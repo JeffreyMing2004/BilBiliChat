@@ -17,6 +17,10 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 - 持续修复多窗口、macOS 原生窗口行为与更新提示细节问题。
 - 修复 Tauri/WebKit 环境下房间初始化请求偶发只报 `Load failed` 的问题；房间号解析与主播资料加载现在会自动重试，并输出可定位的网络错误说明。
 - 修复 GitHub Actions 仅在 `tag/workflow_dispatch` 才触发，导致普通 `push/PR` 不自动编译的问题；现在提交代码会自动执行 lint 与 build，发布链路仍仅在正式发布时运行。
+- 修复开发态前端日志只停留在 WebView 控制台的问题；现在会同步桥接到 Tauri 终端，便于直接在 `tauri dev` 里观察运行日志。
+
+### Changed
+- GitHub Actions 发布矩阵扩展为 Windows、macOS、Ubuntu，并额外上传各平台未打包原始二进制归档；Ubuntu 同时产出 `deb` 与 `AppImage` 安装包。
 
 ### Performance
 - 持续优化 Overlay 长时间运行与消息渲染稳定性。

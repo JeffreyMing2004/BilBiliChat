@@ -130,8 +130,22 @@ jobs:
         include:
           - platform: windows-latest
             args: ""
+            raw_binary_path: src-tauri/target/release/bilbilichat.exe
+            raw_binary_name: bilbilichat.exe
+            raw_asset_suffix: windows-x64
+            raw_archive_ext: zip
           - platform: macos-latest
             args: ""
+            raw_binary_path: src-tauri/target/release/bilbilichat
+            raw_binary_name: bilbilichat
+            raw_asset_suffix: macos-x64
+            raw_archive_ext: tar.gz
+          - platform: ubuntu-latest
+            args: ""
+            raw_binary_path: src-tauri/target/release/bilbilichat
+            raw_binary_name: bilbilichat
+            raw_asset_suffix: linux-x64
+            raw_archive_ext: tar.gz
     runs-on: ${{ matrix.platform }}
     steps:
       - name: Checkout Repository
@@ -147,6 +161,23 @@ jobs:
 
       - name: Install Rust Stable
         uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Linux System Dependencies
+        if: matrix.platform == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            curl \
+            file \
+            libayatana-appindicator3-dev \
+            libgtk-3-dev \
+            libjavascriptcoregtk-4.1-dev \
+            librsvg2-dev \
+            libssl-dev \
+            libwebkit2gtk-4.1-dev \
+            libxdo-dev \
+            patchelf
 
       - name: Cache Rust Artifacts
         uses: swatinem/rust-cache@v2
@@ -206,6 +237,52 @@ jobs:
           generateReleaseNotes: true
           args: ${{ matrix.args }}
 
+      - name: Set Raw Binary Asset Name
+        shell: bash
+        env:
+          RELEASE_VERSION: ${{ needs.prepare-release.outputs.version }}
+          RAW_ASSET_SUFFIX: ${{ matrix.raw_asset_suffix }}
+          RAW_ARCHIVE_EXT: ${{ matrix.raw_archive_ext }}
+        run: |
+          echo "RAW_ARCHIVE_NAME=BilBiliChat_${RELEASE_VERSION}_${RAW_ASSET_SUFFIX}_binary.${RAW_ARCHIVE_EXT}" >> "$GITHUB_ENV"
+
+      - name: Archive Raw Binary
+        shell: bash
+        env:
+          RAW_BINARY_PATH: ${{ matrix.raw_binary_path }}
+          RAW_BINARY_NAME: ${{ matrix.raw_binary_name }}
+          RAW_ARCHIVE_NAME: ${{ env.RAW_ARCHIVE_NAME }}
+        run: |
+          python3 - <<'PY'
+          import os
+          import pathlib
+          import tarfile
+          import zipfile
+
+          raw_binary_path = pathlib.Path(os.environ["RAW_BINARY_PATH"])
+          raw_binary_name = os.environ["RAW_BINARY_NAME"]
+          raw_archive_name = pathlib.Path(os.environ["RAW_ARCHIVE_NAME"])
+
+          if not raw_binary_path.exists():
+            raise SystemExit(f"Raw binary not found: {raw_binary_path}")
+
+          if raw_archive_name.suffix == ".zip":
+            with zipfile.ZipFile(raw_archive_name, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+              archive.write(raw_binary_path, arcname=raw_binary_name)
+          else:
+            with tarfile.open(raw_archive_name, "w:gz") as archive:
+              archive.add(raw_binary_path, arcname=raw_binary_name)
+          PY
+
+      - name: Upload Raw Binary Asset
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ needs.prepare-release.outputs.tag }}
+          RAW_ARCHIVE_NAME: ${{ env.RAW_ARCHIVE_NAME }}
+        run: |
+          gh release upload "$RELEASE_TAG" "$RAW_ARCHIVE_NAME" --clobber
+
   publish-release-assets:
     if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
     needs:
@@ -239,6 +316,10 @@ jobs:
             --pattern "*.app.tar.gz" \
             --pattern "*-setup.exe" \
             --pattern "*.msi" \
+            --pattern "*.AppImage" \
+            --pattern "*.deb" \
+            --pattern "*_binary.zip" \
+            --pattern "*_binary.tar.gz" \
             --dir .release-assets
 
       - name: Build Asset Metadata

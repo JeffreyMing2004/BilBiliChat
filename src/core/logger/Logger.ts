@@ -1,4 +1,7 @@
+import { invoke } from '@tauri-apps/api/core'
+
 import { formatTime } from '../../utils/time'
+import { isTauriRuntime } from '../../utils/http'
 
 export type LogLevel = 'info' | 'warn' | 'error' | 'debug'
 export type LogScope =
@@ -29,6 +32,21 @@ export interface LogRecord {
 type LogListener = (record: LogRecord) => void
 
 const shouldPrintLogs = import.meta.env.DEV
+let tauriLogForwarderReady = true
+
+function forwardLogToTauri(level: LogLevel, scope: LogScope, message: string): void {
+  if (!shouldPrintLogs || !isTauriRuntime() || !tauriLogForwarderReady) {
+    return
+  }
+
+  void invoke('frontend_log', {
+    level,
+    scope,
+    message,
+  }).catch(() => {
+    tauriLogForwarderReady = false
+  })
+}
 
 class Logger {
   private readonly listeners = new Set<LogListener>()
@@ -54,6 +72,8 @@ class Logger {
         console.info(prefix, message)
       }
     }
+
+    forwardLogToTauri(level, scope, message)
 
     if (shouldPrintLogs) {
       this.listeners.forEach((listener) => listener(record))
