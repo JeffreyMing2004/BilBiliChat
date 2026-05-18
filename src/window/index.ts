@@ -3,6 +3,7 @@ import { PhysicalPosition, PhysicalSize, getCurrentWindow } from '@tauri-apps/ap
 
 import { loadStorageItem, saveStorageItem, windowStateStorageKey } from '../settings'
 import type { AppSettings, WindowStateSnapshot } from '../types/settings'
+import { getCurrentWindowLabel } from '../windows/shared/manager'
 
 const DEFAULT_WINDOW_STATE: WindowStateSnapshot = {
   width: 1440,
@@ -13,7 +14,7 @@ const DEFAULT_WINDOW_STATE: WindowStateSnapshot = {
 
 export async function restoreWindowState(): Promise<void> {
   const currentWindow = getCurrentWindow()
-  const state = loadStorageItem(windowStateStorageKey(), DEFAULT_WINDOW_STATE)
+  const state = loadStorageItem(windowStateStorageKey(currentWindow.label), DEFAULT_WINDOW_STATE)
 
   await currentWindow.setSize(new PhysicalSize(state.width, state.height))
   await currentWindow.setPosition(new PhysicalPosition(state.x, state.y))
@@ -21,11 +22,12 @@ export async function restoreWindowState(): Promise<void> {
 
 export async function initializeWindowState(): Promise<() => void> {
   const currentWindow = getCurrentWindow()
+  const windowLabel = getCurrentWindowLabel()
   await restoreWindowState()
 
   const saveBounds = async () => {
     const [size, position] = await Promise.all([currentWindow.outerSize(), currentWindow.outerPosition()])
-    saveStorageItem(windowStateStorageKey(), {
+    saveStorageItem(windowStateStorageKey(currentWindow.label), {
       width: size.width,
       height: size.height,
       x: position.x,
@@ -42,7 +44,7 @@ export async function initializeWindowState(): Promise<() => void> {
   const unlistenClose = await currentWindow.onCloseRequested(async (event) => {
     const settingsStore = (await import('../stores/settings')).useSettingsStore()
 
-    if (settingsStore.settings.minimizeToTray) {
+    if (windowLabel === 'main' && settingsStore.settings.minimizeToTray) {
       event.preventDefault()
       await currentWindow.hide()
     }
@@ -61,12 +63,20 @@ export async function initializeWindowState(): Promise<() => void> {
 
 export async function applyWindowPreferences(settings: AppSettings): Promise<void> {
   const currentWindow = getCurrentWindow()
-  const enableOverlayWindow = settings.obsMode
+  const windowLabel = getCurrentWindowLabel()
 
-  await currentWindow.setDecorations(!enableOverlayWindow)
-  await currentWindow.setAlwaysOnTop(enableOverlayWindow || settings.alwaysOnTop)
-  await currentWindow.setSkipTaskbar(enableOverlayWindow)
-  await currentWindow.setIgnoreCursorEvents(enableOverlayWindow && settings.clickThrough)
+  if (windowLabel === 'danmu') {
+    await currentWindow.setDecorations(false)
+    await currentWindow.setAlwaysOnTop(true)
+    await currentWindow.setSkipTaskbar(true)
+    await currentWindow.setIgnoreCursorEvents(settings.obsMode && settings.clickThrough)
+    return
+  }
+
+  await currentWindow.setDecorations(false)
+  await currentWindow.setAlwaysOnTop(settings.alwaysOnTop)
+  await currentWindow.setSkipTaskbar(false)
+  await currentWindow.setIgnoreCursorEvents(false)
 }
 
 export async function showMainWindow(): Promise<void> {

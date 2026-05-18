@@ -53,6 +53,7 @@ export const useSettingsStore = defineStore('settings', () => {
   const settings = ref<AppSettings>(DEFAULT_SETTINGS)
   const initialized = ref(false)
   const settingsVisible = ref(false)
+  let storageBound = false
 
   const keywordFilters = computed(() => splitFilterText(settings.value.keywordFiltersText))
   const userBlacklist = computed(() => splitFilterText(settings.value.userBlacklistText))
@@ -67,12 +68,32 @@ export const useSettingsStore = defineStore('settings', () => {
     saveStorageItem(settingsStorageKey(), settings.value)
   }
 
+  function bindStorageSync(): void {
+    if (storageBound) {
+      return
+    }
+
+    window.addEventListener('storage', (event) => {
+      if (event.key !== settingsStorageKey() || !event.newValue) {
+        return
+      }
+
+      try {
+        settings.value = normalizeSettings(JSON.parse(event.newValue) as AppSettings)
+      } catch {
+        settings.value = DEFAULT_SETTINGS
+      }
+    })
+    storageBound = true
+  }
+
   function initialize(): void {
     if (initialized.value) {
       return
     }
 
     settings.value = normalizeSettings(loadStorageItem(settingsStorageKey(), DEFAULT_SETTINGS))
+    bindStorageSync()
     initialized.value = true
   }
 

@@ -26,6 +26,7 @@ interface LiveDanmuSocketOptions {
     error?: string
   }) => void
   onPopularity: (popularity: number) => void
+  onLatency?: (latency: number) => void
   onMessage: (message: DanmuMessageItem) => void
   onRawCommand?: (payload: RawDanmuCommand) => void
   onReconnectScheduled?: (notice: ReconnectNotice) => void
@@ -57,6 +58,7 @@ export class LiveDanmuSocket {
   private reconnectCount = 0
   private isManualClose = false
   private isAuthenticated = false
+  private lastHeartbeatAt = 0
   private connectResolve: (() => void) | null = null
   private connectReject: ((error: Error) => void) | null = null
 
@@ -156,6 +158,9 @@ export class LiveDanmuSocket {
         break
       case PacketOperation.HeartbeatReply:
         this.options.onPopularity(readPopularity(frame.body))
+        if (this.lastHeartbeatAt > 0) {
+          this.options.onLatency?.(Math.round(performance.now() - this.lastHeartbeatAt))
+        }
         break
       case PacketOperation.Message:
         await this.handleMessageFrame(frame)
@@ -217,6 +222,7 @@ export class LiveDanmuSocket {
 
     this.heartbeatTimer = window.setInterval(() => {
       if (this.socket?.readyState === WebSocket.OPEN) {
+        this.lastHeartbeatAt = performance.now()
         this.socket.send(createHeartbeatPacket())
       }
     }, HEARTBEAT_INTERVAL_MS)

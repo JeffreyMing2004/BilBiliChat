@@ -2,8 +2,23 @@ import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import { ElMessage } from 'element-plus'
 
-import { resolveRoomId } from '../api/bilibili'
 import { shouldFilterMessage } from '../filters'
+import { getCurrentWindowLabel } from '../windows/shared/manager'
+import {
+  emitActiveRoom,
+  emitDanmuReady,
+  emitRoomMessage,
+  emitRoomPatch,
+  emitRoomsSnapshot,
+  listenActiveRoom,
+  listenDanmuReady,
+  listenRoomMessage,
+  listenRoomPatch,
+  listenRoomsSnapshot,
+} from '../windows/shared/bridge'
+import { calculateTopContributors } from '../modules/ranking'
+import { createRoomSession, moveRoomByStep, restoreRoomSession, serializeRooms } from '../modules/rooms'
+import { fetchStreamerProfile, resolveRoomId } from '../modules/streamer'
 import { activeRoomStorageKey, loadStorageItem, roomsStorageKey, saveStorageItem } from '../settings'
 import { playMessageSound } from '../sound'
 import { useSettingsStore } from './settings'
@@ -13,37 +28,17 @@ import type { LogRecord } from '../utils/logger'
 import { logError, logInfo, logSuccess, logWarning, onLog } from '../utils/logger'
 import { LiveDanmuSocket } from '../websocket'
 import { createSystemNotice } from '../websocket/events'
+import type { ActiveRoomEvent, RoomMessageEvent, RoomPatchEvent, RoomSyncSnapshot } from '../windows/shared/types'
 
-function createRoomId(): string {
-  return `room-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`
-}
-
-function createRoomSession(roomIdInput = ''): RoomSessionState {
-  return {
-    id: createRoomId(),
-    roomIdInput,
-    resolvedRoomId: null,
-    status: 'idle',
-    statusText: '等待连接',
-    websocketState: 'CLOSED',
-    popularity: 0,
-    reconnectCount: 0,
-    lastError: '',
-    messageCount: 0,
-    connecting: false,
-    messages: [],
-  }
-}
-
-function restoreRoomSession(room: PersistedRoomSession): RoomSessionState {
-  return {
-    ...createRoomSession(room.roomIdInput),
-    id: room.id,
-  }
+function clonePlain<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value)) as T
 }
 
 export const useDanmuStore = defineStore('danmu', () => {
   const settingsStore = useSettingsStore()
+  const windowLabel = getCurrentWindowLabel()
+  const isMainWindow = windowLabel === 'main'
+  const isDanmuWindow = windowLabel === 'danmu'
   const roomOrder = ref<string[]>([])
   const rooms = ref<Record<string, RoomSessionState>>({})
   const activeRoomId = ref('')
@@ -52,6 +47,7 @@ export const useDanmuStore = defineStore('danmu', () => {
   const autoScrollEnabled = ref(true)
 
   const sockets = new Map<string, LiveDanmuSocket>()
+  const syncCleanups: Array<() => void> = []
   let unlistenLog: (() => void) | null = null
 
   const roomList = computed(() => roomOrder.value.map((id) => rooms.value[id]).filter(Boolean))
@@ -71,13 +67,28 @@ export const useDanmuStore = defineStore('danmu', () => {
     })
   }
 
-  function persistRooms(): void {
-    const persistedRooms = roomOrder.value.map((id) => ({
-      id,
-      roomIdInput: rooms.value[id]?.roomIdInput ?? '',
-    }))
+  function createSnapshot(): RoomSyncSnapshot {
+    return clonePlain({
+      roomOrder: roomOrder.value,
+      activeRoomId: activeRoomId.value,
+      rooms: rooms.value,
+    })
+  }
 
-    saveStorageItem(roomsStorageKey(), persistedRooms)
+  function emitSnapshot(): void {
+    if (!isMainWindow) {
+      return
+    }
+
+    void emitRoomsSnapshot(createSnapshot())
+  }
+
+  function persistRooms(): void {
+    if (!isMainWindow) {
+      return
+    }
+
+    saveStorageItem(roomsStorageKey(), serializeRooms(roomOrder.value, rooms.value))
     saveStorageItem(activeRoomStorageKey(), activeRoomId.value)
   }
 
@@ -88,10 +99,22 @@ export const useDanmuStore = defineStore('danmu', () => {
       roomOrder.value = [room.id]
       activeRoomId.value = room.id
       persistRooms()
+      emitSnapshot()
     }
   }
 
-  function updateRoom(roomId: string, patch: Partial<RoomSessionState>): void {
+  function syncRoomPatch(roomId: string, patch: Partial<RoomSessionState>): void {
+    if (!isMainWindow) {
+      return
+    }
+
+    void emitRoomPatch({
+      roomId,
+      patch: clonePlain(patch),
+    })
+  }
+
+  function updateRoom(roomId: string, patch: Partial<RoomSessionState>, sync = true): void {
     const room = rooms.value[roomId]
 
     if (!room) {
@@ -102,9 +125,24 @@ export const useDanmuStore = defineStore('danmu', () => {
       ...room,
       ...patch,
     }
+
+    if (sync) {
+      syncRoomPatch(roomId, patch)
+    }
   }
 
-  function addIncomingMessage(roomId: string, message: DanmuMessageItem): void {
+  function recalculateRoomDerivedState(roomId: string): void {
+    const room = rooms.value[roomId]
+
+    if (!room) {
+      return
+    }
+
+    room.messageCount = room.messages.length
+    room.topContributors = calculateTopContributors(room.messages)
+  }
+
+  function addIncomingMessage(roomId: string, message: DanmuMessageItem, sync = true): void {
     const room = rooms.value[roomId]
 
     if (!room) {
@@ -117,10 +155,28 @@ export const useDanmuStore = defineStore('danmu', () => {
       room.messages.splice(0, room.messages.length - settingsStore.settings.maxMessages)
     }
 
-    room.messageCount = room.messages.length
+    if (message.type === 'system' && message.systemKind === 'entry') {
+      room.entryCount += 1
+    }
+
+    recalculateRoomDerivedState(roomId)
+
+    if (sync && isMainWindow) {
+      void emitRoomMessage({
+        roomId,
+        message: clonePlain(message),
+        maxMessages: settingsStore.settings.maxMessages,
+      })
+      syncRoomPatch(roomId, {
+        messageCount: room.messageCount,
+        topContributors: room.topContributors,
+        entryCount: room.entryCount,
+      })
+    }
 
     if (
-      settingsStore.settings.soundEnabled
+      isMainWindow
+      && settingsStore.settings.soundEnabled
       && !shouldFilterMessage(
         message,
         settingsStore.settings,
@@ -142,12 +198,12 @@ export const useDanmuStore = defineStore('danmu', () => {
   }
 
   function notifyStatusTransition(roomId: string, nextStatus: ConnectionStatus, statusText: string, error?: string): void {
-    if (roomId !== activeRoomId.value) {
+    if (!isMainWindow || roomId !== activeRoomId.value) {
       return
     }
 
     if (nextStatus === 'connected') {
-      ElMessage.success('连接成功')
+      ElMessage.success('连接成功，独立弹幕窗口已就绪')
     } else if (nextStatus === 'reconnecting') {
       ElMessage.warning(statusText)
     } else if (nextStatus === 'disconnected') {
@@ -157,11 +213,46 @@ export const useDanmuStore = defineStore('danmu', () => {
     }
   }
 
+  async function bindWindowSync(): Promise<void> {
+    if (syncCleanups.length > 0) {
+      return
+    }
+
+    if (isMainWindow) {
+      syncCleanups.push(await listenDanmuReady(() => {
+        emitSnapshot()
+      }))
+      return
+    }
+
+    if (!isDanmuWindow) {
+      return
+    }
+
+    syncCleanups.push(await listenRoomsSnapshot((snapshot) => {
+      rooms.value = snapshot.rooms
+      roomOrder.value = snapshot.roomOrder
+      activeRoomId.value = snapshot.activeRoomId || snapshot.roomOrder[0] || ''
+      autoScrollEnabled.value = true
+    }))
+    syncCleanups.push(await listenRoomPatch((payload: RoomPatchEvent) => {
+      updateRoom(payload.roomId, payload.patch, false)
+    }))
+    syncCleanups.push(await listenRoomMessage((payload: RoomMessageEvent) => {
+      addIncomingMessage(payload.roomId, payload.message, false)
+    }))
+    syncCleanups.push(await listenActiveRoom((payload: ActiveRoomEvent) => {
+      setActiveRoom(payload.roomId, false)
+    }))
+    await emitDanmuReady()
+  }
+
   async function initialize(): Promise<void> {
     if (initialized.value) {
       return
     }
 
+    settingsStore.initialize()
     bindLogger()
     const persistedRooms = loadStorageItem<PersistedRoomSession[]>(roomsStorageKey(), [])
     const storedActiveRoomId = loadStorageItem(activeRoomStorageKey(), '')
@@ -177,8 +268,18 @@ export const useDanmuStore = defineStore('danmu', () => {
       activeRoomId.value = roomOrder.value[0]
     }
 
+    await bindWindowSync()
     initialized.value = true
-    logInfo('store', '多房间状态初始化完成')
+    logInfo('store', `多房间状态初始化完成，当前窗口：${windowLabel}`)
+
+    if (isMainWindow) {
+      roomList.value.forEach((room) => {
+        if (room.autoConnect && room.roomIdInput.trim()) {
+          void connectRoom(room.id)
+        }
+      })
+      emitSnapshot()
+    }
   }
 
   function addRoom(): void {
@@ -188,16 +289,30 @@ export const useDanmuStore = defineStore('danmu', () => {
     activeRoomId.value = room.id
     autoScrollEnabled.value = true
     persistRooms()
+    emitSnapshot()
   }
 
-  function setActiveRoom(roomId: string): void {
+  function moveRoom(roomId: string, step: -1 | 1): void {
+    roomOrder.value = moveRoomByStep(roomOrder.value, roomId, step)
+    persistRooms()
+    emitSnapshot()
+  }
+
+  function setActiveRoom(roomId: string, sync = true): void {
     if (!rooms.value[roomId]) {
       return
     }
 
     activeRoomId.value = roomId
     autoScrollEnabled.value = true
-    persistRooms()
+
+    if (isMainWindow) {
+      persistRooms()
+    }
+
+    if (sync && isMainWindow) {
+      void emitActiveRoom({ roomId })
+    }
   }
 
   function removeRoom(roomId: string): void {
@@ -211,14 +326,33 @@ export const useDanmuStore = defineStore('danmu', () => {
 
     ensureRoomExists()
     persistRooms()
+    emitSnapshot()
   }
 
   function updateRoomInput(roomId: string, roomIdInput: string): void {
-    updateRoom(roomId, { roomIdInput })
+    updateRoom(roomId, { roomIdInput }, false)
     persistRooms()
+    emitSnapshot()
+  }
+
+  async function hydrateStreamer(roomId: string, resolvedRoomId: number): Promise<void> {
+    try {
+      const profile = await fetchStreamerProfile(resolvedRoomId)
+      updateRoom(roomId, {
+        streamer: profile,
+        onlineCount: profile.onlineCount,
+      })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '主播信息获取失败'
+      logWarning('store', message)
+    }
   }
 
   async function connectRoom(roomId = activeRoomId.value): Promise<void> {
+    if (!isMainWindow) {
+      return
+    }
+
     const room = rooms.value[roomId]
 
     if (!room) {
@@ -240,7 +374,9 @@ export const useDanmuStore = defineStore('danmu', () => {
       lastError: '',
       popularity: 0,
       connecting: true,
+      autoConnect: true,
     })
+    persistRooms()
 
     try {
       const resolvedRoomId = await resolveRoomId(inputRoomId)
@@ -250,6 +386,7 @@ export const useDanmuStore = defineStore('danmu', () => {
       })
       addSystemNotice(roomId, `已解析真实房间号：${resolvedRoomId}`, 'soft', 'ROOM_RESOLVED')
       logInfo('connection', `房间 ${inputRoomId} 解析成功: ${resolvedRoomId}`)
+      await hydrateStreamer(roomId, resolvedRoomId)
 
       const socket = new LiveDanmuSocket({
         roomId: resolvedRoomId,
@@ -268,6 +405,9 @@ export const useDanmuStore = defineStore('danmu', () => {
         onPopularity: (popularity) => {
           updateRoom(roomId, { popularity })
         },
+        onLatency: (latency) => {
+          updateRoom(roomId, { wsLatency: latency })
+        },
         onMessage: (message) => {
           console.log(`[LiveDanmu][${message.rawCommand}]`, message.summary)
           addIncomingMessage(roomId, message)
@@ -281,8 +421,9 @@ export const useDanmuStore = defineStore('danmu', () => {
       })
 
       sockets.set(roomId, socket)
-      persistRooms()
       await socket.connect()
+      persistRooms()
+      emitSnapshot()
       logSuccess('connection', `房间 ${inputRoomId} 已连接`)
     } catch (error) {
       const message = error instanceof Error ? error.message : '连接失败'
@@ -312,7 +453,7 @@ export const useDanmuStore = defineStore('danmu', () => {
     )
     logWarning('websocket', `${notice.reason}，${notice.reconnectInSeconds} 秒后自动重连`)
 
-    if (roomId === activeRoomId.value) {
+    if (isMainWindow && roomId === activeRoomId.value) {
       ElMessage.warning('WebSocket 断开，正在自动重连')
     }
   }
@@ -334,9 +475,11 @@ export const useDanmuStore = defineStore('danmu', () => {
       websocketState: 'CLOSED',
       reconnectCount: 0,
       connecting: false,
+      autoConnect: false,
     })
+    persistRooms()
 
-    if (showToast && roomId === activeRoomId.value) {
+    if (showToast && isMainWindow && roomId === activeRoomId.value) {
       ElMessage.info('WebSocket 已断开')
     }
   }
@@ -354,8 +497,12 @@ export const useDanmuStore = defineStore('danmu', () => {
       return
     }
 
-    activeRoom.value.messages = []
-    activeRoom.value.messageCount = 0
+    updateRoom(activeRoom.value.id, {
+      messages: [],
+      messageCount: 0,
+      entryCount: 0,
+      topContributors: [],
+    })
     addSystemNotice(activeRoom.value.id, '已清空弹幕列表', 'soft', 'CLEAR_MESSAGES')
   }
 
@@ -369,7 +516,12 @@ export const useDanmuStore = defineStore('danmu', () => {
 
       if (room.messages.length > limit) {
         room.messages.splice(0, room.messages.length - limit)
-        room.messageCount = room.messages.length
+        recalculateRoomDerivedState(roomId)
+        syncRoomPatch(roomId, {
+          messages: room.messages,
+          messageCount: room.messageCount,
+          topContributors: room.topContributors,
+        })
       }
     })
   }
@@ -382,8 +534,10 @@ export const useDanmuStore = defineStore('danmu', () => {
     canConnectActive,
     initialized,
     isAutoScrollPaused,
+    isMainWindow,
     logs,
     roomList,
+    roomOrder,
     rooms,
     addRoom,
     applyMessageLimit,
@@ -391,6 +545,7 @@ export const useDanmuStore = defineStore('danmu', () => {
     connectRoom,
     disconnectRoom,
     initialize,
+    moveRoom,
     reconnectActiveRoom,
     removeRoom,
     setActiveRoom,

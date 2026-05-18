@@ -48,6 +48,6 @@ export function activeRoomStorageKey(): string {
   return ACTIVE_ROOM_KEY
 }
 
-export function windowStateStorageKey(): string {
-  return WINDOW_STATE_KEY
+export function windowStateStorageKey(label = 'main'): string {
+  return `${WINDOW_STATE_KEY}.${label}`
 }

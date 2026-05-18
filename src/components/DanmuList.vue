@@ -1,6 +1,12 @@
 <template>
-  <section class="danmu-panel glass-panel">
-    <div class="panel-head">
+  <section
+    class="danmu-panel glass-panel"
+    :class="{ 'danmu-panel--embedded': isDanmuWindow }"
+  >
+    <div
+      v-if="!isDanmuWindow"
+      class="panel-head"
+    >
       <div>
         <h2>{{ settingsStore.settings.obsMode ? 'OBS 弹幕 Overlay' : '实时互动流' }}</h2>
         <p>{{ headDescription }}</p>
@@ -92,6 +98,7 @@ import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { shouldFilterMessage } from '../filters'
 import { useDanmuStore } from '../stores/danmu'
 import { useSettingsStore } from '../stores/settings'
+import { getCurrentWindowLabel } from '../windows/shared/manager'
 import DanmuItem from './DanmuItem.vue'
 import GiftItem from './GiftItem.vue'
 import SCItem from './SCItem.vue'
@@ -99,6 +106,7 @@ import SystemMessage from './SystemMessage.vue'
 
 const store = useDanmuStore()
 const settingsStore = useSettingsStore()
+const isDanmuWindow = getCurrentWindowLabel() === 'danmu'
 const listRef = ref<HTMLElement | null>(null)
 const scrollTop = ref(0)
 const viewportHeight = ref(600)
