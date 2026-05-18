@@ -1,0 +1,16 @@
+title: "Ideas"
+labels:
+  - discussion
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        适合讨论 Overlay Studio、Plugin SDK、OpenLive、桌面体验等产品改进方向。
+  - type: textarea
+    id: idea
+    attributes:
+      label: 你的想法
+      placeholder: 描述你的产品建议或设计思路
+    validations:
+      required: true

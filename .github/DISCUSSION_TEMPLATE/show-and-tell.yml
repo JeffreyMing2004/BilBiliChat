@@ -1,0 +1,16 @@
+title: "Show And Tell"
+labels:
+  - discussion
+  - showcase
+body:
+  - type: markdown
+    attributes:
+      value: |
+        欢迎分享你的 Overlay 预设、直播工作流、插件作品或 Beta 体验反馈。
+  - type: textarea
+    id: showcase
+    attributes:
+      label: 你的分享
+      placeholder: 你做了什么？为什么值得分享？
+    validations:
+      required: true

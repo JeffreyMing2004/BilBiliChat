@@ -6,7 +6,7 @@
     <header class="main-topbar glass-panel">
       <div data-tauri-drag-region>
         <p class="eyebrow">
-          LiveDanmu Console
+          BilBiliChat Console
         </p>
         <h1>专业级 Bilibili 直播控制台</h1>
         <p class="window-subtitle">

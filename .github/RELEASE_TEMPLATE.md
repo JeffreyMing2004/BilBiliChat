@@ -1,4 +1,4 @@
-# BilBiliChat vX.Y.Z
+# BilBiliChat v0.1.0-beta
 
 > Professional Bilibili OBS Danmaku Desktop Client
 
@@ -35,6 +35,7 @@
 
 ## Upgrade Notes
 - 
+- See `CHANGELOG.md` for curated release history.
 
 ## Download
 - macOS: `BilBiliChat_x.y.z_universal.dmg`

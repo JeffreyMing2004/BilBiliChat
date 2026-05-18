@@ -1,0 +1,15 @@
+title: "Q&A"
+labels:
+  - discussion
+body:
+  - type: markdown
+    attributes:
+      value: |
+        适合提问使用方法、集成方式、Updater 行为、OpenLive 配置等问题。
+  - type: textarea
+    id: question
+    attributes:
+      label: 你的问题
+      placeholder: 请描述你遇到的问题或想了解的内容
+    validations:
+      required: true

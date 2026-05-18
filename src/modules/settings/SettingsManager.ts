@@ -30,7 +30,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   minimizeToTray: true,
   updaterEnabled: true,
   autoCheckUpdates: true,
-  updateChannel: 'stable',
+  updateChannel: 'beta',
   hideGift: false,
   hideEntry: false,
   hideSystem: false,

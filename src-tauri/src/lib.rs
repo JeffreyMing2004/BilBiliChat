@@ -41,13 +41,13 @@ fn apply_macos_native_chrome<'a, R: tauri::Runtime, M: Manager<R>>(
 
 fn ensure_app_window(app: &AppHandle, kind: &str) -> tauri::Result<()> {
   let (label, title) = match kind {
-    "danmu" => ("danmu", "LiveDanmu - DanmuWindow"),
-    "settings" => ("settings", "LiveDanmu - SettingsWindow"),
-    "login" => ("login", "LiveDanmu - LoginWindow"),
-    "debug" => ("debug", "LiveDanmu - DebugWindow"),
-    "crash" => ("crash", "LiveDanmu - CrashWindow"),
-    "overlay-studio" => ("overlay-studio", "LiveDanmu - OverlayStudioWindow"),
-    _ => ("main", "LiveDanmu"),
+    "danmu" => ("danmu", "BilBiliChat - DanmuWindow"),
+    "settings" => ("settings", "BilBiliChat - SettingsWindow"),
+    "login" => ("login", "BilBiliChat - LoginWindow"),
+    "debug" => ("debug", "BilBiliChat - DebugWindow"),
+    "crash" => ("crash", "BilBiliChat - CrashWindow"),
+    "overlay-studio" => ("overlay-studio", "BilBiliChat - OverlayStudioWindow"),
+    _ => ("main", "BilBiliChat"),
   };
 
   if let Some(window) = app.get_webview_window(label) {
@@ -207,7 +207,7 @@ fn setup_tray(app: &tauri::App) -> tauri::Result<()> {
   let show = MenuItem::with_id(app, "tray.show", "显示主控制台", true, None::<&str>)?;
   let toggle_obs = MenuItem::with_id(app, "tray.toggle_obs", "切换 OBS 模式", true, None::<&str>)?;
   let open_settings = MenuItem::with_id(app, "tray.settings", "打开设置窗口", true, None::<&str>)?;
-  let quit = MenuItem::with_id(app, "tray.quit", "退出 LiveDanmu", true, None::<&str>)?;
+  let quit = MenuItem::with_id(app, "tray.quit", "退出 BilBiliChat", true, None::<&str>)?;
   let separator = PredefinedMenuItem::separator(app)?;
   let menu = Menu::with_items(app, &[&show, &toggle_obs, &open_settings, &separator, &quit])?;
 

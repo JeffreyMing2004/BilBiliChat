@@ -1,6 +1,6 @@
 [package]
 name = "bilbilichat"
-version = "0.1.0"
+version = "0.1.0-beta"
 description = "BilBiliChat desktop client"
 authors = ["Trae AI"]
 license = "MIT"

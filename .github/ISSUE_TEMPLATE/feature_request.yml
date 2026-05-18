@@ -1,0 +1,50 @@
+name: Feature Request
+description: 提交 BilBiliChat 的产品改进建议或功能需求
+title: "[Feature]: "
+labels:
+  - enhancement
+  - product
+body:
+  - type: markdown
+    attributes:
+      value: |
+        欢迎提交功能建议。公开 Beta 阶段优先处理正式发布相关的改进、稳定性和易用性问题。
+  - type: textarea
+    id: problem
+    attributes:
+      label: 想解决什么问题？
+      placeholder: 当前你遇到的痛点是什么？
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 你的建议方案
+      placeholder: 希望 BilBiliChat 如何改进？
+    validations:
+      required: true
+  - type: dropdown
+    id: scope
+    attributes:
+      label: 功能范围
+      options:
+        - Main Console
+        - Overlay
+        - Overlay Studio
+        - OpenLive
+        - Plugin System
+        - Updater
+        - Crash Report
+        - Documentation
+  - type: textarea
+    id: references
+    attributes:
+      label: 参考产品 / 截图 / 设计灵感
+      placeholder: 如有 OBS、Discord、Streamlabs 等参考，可附在这里
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: 检查项
+      options:
+        - label: 我已搜索过现有 Issues / Discussions
+          required: true

@@ -23,7 +23,7 @@ import { getVersion } from '@tauri-apps/api/app'
 
 import { logError } from '../../core/logger/Logger'
 import SettingsPanel from '../../components/SettingsPanel.vue'
-import { initializeUpdater } from '../../modules/updater'
+import { initializeUpdater, setUpdateChannel } from '../../modules/updater'
 import { useAuthStore } from '../../stores/auth'
 import { useDanmuStore } from '../../stores/danmu'
 import { useSettingsStore } from '../../stores/settings'
@@ -48,5 +48,6 @@ onMounted(async () => {
   await authStore.initialize()
   await store.initialize()
   await initializeUpdater(await getVersion())
+  setUpdateChannel(settingsStore.settings.updateChannel)
 })
 </script>

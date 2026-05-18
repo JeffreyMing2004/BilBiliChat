@@ -421,6 +421,13 @@
           检查更新
         </el-button>
         <el-button
+          plain
+          :disabled="!updaterState.availableVersion"
+          @click="openUpdateDialogPanel"
+        >
+          查看更新详情
+        </el-button>
+        <el-button
           type="primary"
           :loading="updaterState.installing"
           :disabled="!updaterState.availableVersion"
@@ -506,6 +513,7 @@ import {
   downloadAndInstallUpdate,
   downloadUpdatePackage,
   installDownloadedUpdate,
+  openUpdateDialog,
   setUpdateChannel,
   updaterState,
 } from '../modules/updater'
@@ -546,8 +554,14 @@ function exportJson(): void {
 }
 
 async function checkUpdates(): Promise<void> {
-  const available = await checkForAppUpdates(settingsStore.settings.updateChannel)
+  const available = await checkForAppUpdates(settingsStore.settings.updateChannel, {
+    openDialog: true,
+  })
   ElMessage.success(available ? '发现新版本' : '当前已经是最新版本')
+}
+
+function openUpdateDialogPanel(): void {
+  openUpdateDialog()
 }
 
 function changeUpdateChannel(channel: AppSettings['updateChannel']): void {

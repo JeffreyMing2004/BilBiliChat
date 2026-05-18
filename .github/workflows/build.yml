@@ -2,19 +2,86 @@ name: build-and-release
 
 on:
   push:
-    branches:
-      - main
+    tags:
+      - "v*"
   workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version, for example 0.1.0-beta"
+        required: false
+        type: string
 
 permissions:
   contents: write
 
 concurrency:
-  group: build-release-${{ github.ref }}
-  cancel-in-progress: true
+  group: build-release-${{ github.ref_name }}
+  cancel-in-progress: false
 
 jobs:
+  prepare-release:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+      tag: ${{ steps.meta.outputs.tag }}
+      release_name: ${{ steps.meta.outputs.release_name }}
+      prerelease: ${{ steps.meta.outputs.prerelease }}
+      channel: ${{ steps.meta.outputs.channel }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve Release Metadata
+        id: meta
+        shell: bash
+        run: |
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+          elif [[ -n "${{ github.event.inputs.version }}" ]]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            VERSION="$(node -p "require('./package.json').version")"
+          fi
+
+          if [[ "$VERSION" == *"beta"* || "$VERSION" == *"alpha"* || "$VERSION" == *"rc"* ]]; then
+            PRERELEASE=true
+            CHANNEL=beta
+          else
+            PRERELEASE=false
+            CHANNEL=stable
+          fi
+
+          TAG="v${VERSION}"
+
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "release_name=BilBiliChat v$VERSION" >> "$GITHUB_OUTPUT"
+          echo "prerelease=$PRERELEASE" >> "$GITHUB_OUTPUT"
+          echo "channel=$CHANNEL" >> "$GITHUB_OUTPUT"
+
+      - name: Create Tag For Manual Release
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ steps.meta.outputs.tag }}
+        run: |
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            echo "Release already exists for $RELEASE_TAG"
+            exit 0
+          fi
+
+          if git rev-parse "$RELEASE_TAG" >/dev/null 2>&1; then
+            echo "Tag $RELEASE_TAG already exists locally"
+            exit 0
+          fi
+
+          git tag "$RELEASE_TAG"
+          git push origin "$RELEASE_TAG"
+
   build-tauri:
+    needs: prepare-release
     strategy:
       fail-fast: false
       matrix:
@@ -23,12 +90,12 @@ jobs:
             args: ""
           - platform: macos-latest
             args: ""
-
     runs-on: ${{ matrix.platform }}
-
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare-release.outputs.tag }}
 
       - name: Setup Node.js 20
         uses: actions/setup-node@v4
@@ -55,13 +122,83 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           projectPath: .
-          tagName: bilbilichat-v__VERSION__
-          releaseName: BilBiliChat v__VERSION__
+          tagName: ${{ needs.prepare-release.outputs.tag }}
+          releaseName: ${{ needs.prepare-release.outputs.release_name }}
           releaseBody: |
-            Automated release for BilBiliChat.
+            BilBiliChat Beta release for desktop testers.
 
-            Download the installer assets for Windows or macOS from this release.
+            - See `CHANGELOG.md` for curated release history.
+            - See auto generated notes below for merged changes.
           releaseDraft: false
-          prerelease: false
+          prerelease: ${{ needs.prepare-release.outputs.prerelease }}
           generateReleaseNotes: true
           args: ${{ matrix.args }}
+
+  publish-release-assets:
+    needs:
+      - prepare-release
+      - build-tauri
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Fetch Release Metadata
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ needs.prepare-release.outputs.tag }}
+        run: |
+          gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${RELEASE_TAG}" > release.json
+
+      - name: Download Release Assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ needs.prepare-release.outputs.tag }}
+        run: |
+          mkdir -p .release-assets
+          gh release download "$RELEASE_TAG" \
+            --pattern "*.sig" \
+            --pattern "*.app.tar.gz" \
+            --pattern "*-setup.exe" \
+            --pattern "*.msi" \
+            --dir .release-assets
+
+      - name: Build Asset Metadata
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import { existsSync, readFileSync, writeFileSync } from 'node:fs'
+          const release = JSON.parse(readFileSync('release.json', 'utf8'))
+          const assets = release.assets.map((asset) => ({
+            name: asset.name,
+            browser_download_url: asset.browser_download_url,
+            local_path: existsSync(`.release-assets/${asset.name}`) ? `.release-assets/${asset.name}` : null,
+          }))
+          writeFileSync('release-assets.json', JSON.stringify(assets, null, 2))
+          NODE
+
+      - name: Generate latest.json And Checksums
+        env:
+          RELEASE_JSON_PATH: release.json
+          RELEASE_ASSETS_JSON_PATH: release-assets.json
+          RELEASE_VERSION: ${{ needs.prepare-release.outputs.version }}
+          RELEASE_CHANNEL: ${{ needs.prepare-release.outputs.channel }}
+          RELEASE_OUTPUT_DIR: dist/release-assets
+        run: node scripts/generate-release-assets.mjs
+
+      - name: Upload latest.json And Checksums
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ needs.prepare-release.outputs.tag }}
+          RELEASE_CHANNEL: ${{ needs.prepare-release.outputs.channel }}
+        run: |
+          gh release upload "$RELEASE_TAG" \
+            dist/release-assets/latest.json \
+            dist/release-assets/${RELEASE_CHANNEL}.latest.json \
+            dist/release-assets/checksums.json \
+            --clobber

@@ -3,6 +3,7 @@ import { getCurrentWindowLabel } from '../../windows/shared/manager'
 import { logError, logInfo } from '../logger/Logger'
 import { recoveryManager } from '../recovery/RecoveryManager'
 import { windowBridge } from '../windows/WindowBridge'
+import { sentryBridge } from './SentryBridge'
 
 export type CrashDomain = 'runtime' | 'overlay' | 'websocket' | 'window'
 
@@ -83,6 +84,37 @@ export class CrashReporter {
     return [...this.reports]
   }
 
+  exportReportsJson(): string {
+    return JSON.stringify(this.reports, null, 2)
+  }
+
+  exportReportsText(): string {
+    return this.reports.map((report) => [
+      `# ${report.domain.toUpperCase()} ${report.source}`,
+      `Occurred At: ${new Date(report.occurredAt).toISOString()}`,
+      `Window: ${report.windowLabel}`,
+      `Fatal: ${report.fatal ? 'yes' : 'no'}`,
+      `Message: ${report.message}`,
+      report.stack ? `Stack:\n${report.stack}` : 'Stack: <empty>',
+      Object.keys(report.metadata).length
+        ? `Metadata:\n${JSON.stringify(report.metadata, null, 2)}`
+        : 'Metadata: <empty>',
+    ].join('\n')).join('\n\n')
+  }
+
+  downloadReports(format: 'json' | 'txt' = 'json'): void {
+    const content = format === 'json' ? this.exportReportsJson() : this.exportReportsText()
+    const type = format === 'json' ? 'application/json' : 'text/plain;charset=utf-8'
+    const extension = format === 'json' ? 'json' : 'txt'
+    const blob = new Blob([content], { type })
+    const url = URL.createObjectURL(blob)
+    const anchor = document.createElement('a')
+    anchor.href = url
+    anchor.download = `bilbilichat-crash-report-${Date.now()}.${extension}`
+    anchor.click()
+    URL.revokeObjectURL(url)
+  }
+
   subscribe(listener: CrashListener): () => void {
     this.listeners.add(listener)
     listener(this.getReports())
@@ -134,6 +166,7 @@ export class CrashReporter {
     this.reports = [report, ...this.reports].slice(0, MAX_CRASH_REPORTS)
     this.persist()
     this.notify()
+    sentryBridge.captureCrash(report)
 
     logError(
       'crash',
@@ -211,6 +244,7 @@ export class CrashReporter {
 
     window.addEventListener('error', onError)
     window.addEventListener('unhandledrejection', onUnhandledRejection)
+    sentryBridge.initialize()
     logInfo('crash', `CrashReporter 已安装全局监听: ${windowLabel}`)
 
     return () => {

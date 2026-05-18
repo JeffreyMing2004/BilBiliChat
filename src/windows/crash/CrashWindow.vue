@@ -22,6 +22,20 @@
           <el-button
             plain
             :disabled="!reports.length"
+            @click="exportJson"
+          >
+            导出 JSON
+          </el-button>
+          <el-button
+            plain
+            :disabled="!reports.length"
+            @click="exportText"
+          >
+            导出文本
+          </el-button>
+          <el-button
+            plain
+            :disabled="!reports.length"
             @click="clearReports"
           >
             清空报告
@@ -155,6 +169,16 @@ async function copyLatest(): Promise<void> {
 function clearReports(): void {
   crashReporter.clear()
   ElMessage.success('崩溃报告已清空')
+}
+
+function exportJson(): void {
+  crashReporter.downloadReports('json')
+  ElMessage.success('Crash Report JSON 已导出')
+}
+
+function exportText(): void {
+  crashReporter.downloadReports('txt')
+  ElMessage.success('Crash Report 文本已导出')
 }
 
 async function closeWindow(): Promise<void> {

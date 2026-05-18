@@ -1,0 +1,51 @@
+name: Crash Report
+description: 提交 BilBiliChat Crash Center 导出的崩溃报告
+title: "[Crash]: "
+labels:
+  - crash
+  - bug
+  - triage
+body:
+  - type: markdown
+    attributes:
+      value: |
+        如果 BilBiliChat 发生崩溃，请优先从 Crash Center 导出日志后再提交。
+  - type: input
+    id: version
+    attributes:
+      label: 版本号
+      placeholder: v0.1.0-beta
+    validations:
+      required: true
+  - type: dropdown
+    id: crash-domain
+    attributes:
+      label: 崩溃类型
+      options:
+        - Overlay
+        - Window
+        - WebSocket
+        - Runtime
+        - Unknown
+    validations:
+      required: true
+  - type: textarea
+    id: happened
+    attributes:
+      label: 崩溃发生时你在做什么？
+      placeholder: 描述操作路径，例如“连接直播间后打开 Overlay Studio”
+    validations:
+      required: true
+  - type: textarea
+    id: report
+    attributes:
+      label: Crash Report JSON / 文本
+      description: 粘贴 Crash Center 导出的报告内容
+      render: json
+    validations:
+      required: true
+  - type: textarea
+    id: additional
+    attributes:
+      label: 额外信息
+      placeholder: 系统版本、屏幕数量、是否开启 OBS 模式等

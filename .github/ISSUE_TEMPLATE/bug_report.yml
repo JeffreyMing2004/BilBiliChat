@@ -1,0 +1,68 @@
+name: Bug Report
+description: 报告 BilBiliChat Beta 中的功能异常、UI 问题或行为回归
+title: "[Bug]: "
+labels:
+  - bug
+  - triage
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢你参与 BilBiliChat Beta 测试。请尽可能完整填写以下信息，便于快速定位问题。
+  - type: input
+    id: version
+    attributes:
+      label: 版本号
+      description: 例如 `v0.1.0-beta`
+      placeholder: v0.1.0-beta
+    validations:
+      required: true
+  - type: dropdown
+    id: platform
+    attributes:
+      label: 操作系统
+      options:
+        - macOS
+        - Windows
+        - Linux
+    validations:
+      required: true
+  - type: textarea
+    id: summary
+    attributes:
+      label: 问题描述
+      placeholder: 简要描述实际发生了什么问题
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤
+      placeholder: |
+        1. 打开...
+        2. 点击...
+        3. 出现...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期望结果
+      placeholder: 你原本预期看到的行为
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: 日志 / 截图 / Crash Report
+      description: 如有 Crash Center 导出的 JSON、终端日志或截图，请粘贴到这里
+      render: shell
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: 检查项
+      options:
+        - label: 我已确认使用的是最新 Beta 版本
+          required: true
+        - label: 我已搜索过现有 Issues，确认未重复提交
+          required: true
