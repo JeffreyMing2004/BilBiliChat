@@ -20,6 +20,19 @@ interface MessageMeta {
   guardLevel?: number
   guardLabel?: string
   likeCount?: number
+  openLiveOpenId?: string
+  openLiveUnionId?: string
+  openLiveRoomId?: number
+  openLiveMessageId?: string
+  openLiveTimestamp?: number
+  openLiveEmojiImageUrl?: string
+  openLiveDmType?: number
+  openLiveGloryLevel?: number
+  openLiveReplyOpenId?: string
+  openLiveReplyUsername?: string
+  openLiveIsAdmin?: boolean
+  openLiveFansMedalWearing?: boolean
+  openLiveMirror?: boolean
 }
 
 export function createDanmuMessage(

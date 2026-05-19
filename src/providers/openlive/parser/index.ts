@@ -39,6 +39,27 @@ function pickString(...values: unknown[]): string {
   return ''
 }
 
+function pickBoolean(...values: unknown[]): boolean | undefined {
+  for (const value of values) {
+    if (typeof value === 'boolean') {
+      return value
+    }
+    if (typeof value === 'number') {
+      return value !== 0
+    }
+    if (typeof value === 'string' && value.trim()) {
+      if (value === '1' || value.toLowerCase() === 'true') {
+        return true
+      }
+      if (value === '0' || value.toLowerCase() === 'false') {
+        return false
+      }
+    }
+  }
+
+  return undefined
+}
+
 function normalizeCommand(command: string): string {
   const value = command.trim()
   const aliasMap: Record<string, string> = {
@@ -86,6 +107,17 @@ function buildMessageMeta(data: OpenLiveRecord) {
   const likeCount = pickNumber(data.like_count, data.click_count, data.likes)
   const avatar = pickString(data.uface, data.face, data.avatar)
   const userLevel = pickNumber(data.user_level, data.level, data.wealth_level)
+  const timestamp = pickNumber(data.timestamp, data.send_time)
+  const roomId = pickNumber(data.room_id, data.roomId)
+  const messageId = pickString(data.msg_id, data.message_id, data.id)
+  const dmType = pickNumber(data.dm_type, data.msg_type)
+  const gloryLevel = pickNumber(data.glory_level)
+  const isAdmin = pickBoolean(data.is_admin, data.admin)
+  const medalWearing = pickBoolean(
+    data.fans_medal_wearing_status,
+    medal.wearing_status,
+    medal.is_wear,
+  )
 
   return {
     provider: 'open-live' as const,
@@ -96,6 +128,18 @@ function buildMessageMeta(data: OpenLiveRecord) {
     guardLevel,
     guardLabel: resolveGuardLabel(guardLevel),
     likeCount,
+    openLiveOpenId: pickString(data.open_id) || undefined,
+    openLiveUnionId: pickString(data.union_id) || undefined,
+    openLiveRoomId: roomId,
+    openLiveMessageId: messageId || undefined,
+    openLiveTimestamp: timestamp,
+    openLiveEmojiImageUrl: pickString(data.emoji_img_url, data.emoji_url) || undefined,
+    openLiveDmType: dmType,
+    openLiveGloryLevel: gloryLevel,
+    openLiveReplyOpenId: pickString(data.reply_open_id) || undefined,
+    openLiveReplyUsername: pickString(data.reply_uname) || undefined,
+    openLiveIsAdmin: isAdmin,
+    openLiveFansMedalWearing: medalWearing,
   }
 }
 
@@ -130,6 +174,17 @@ export function parseOpenLiveCommand(payload: RawDanmuCommand): LiveMessage | nu
       }
 
       return createDanmuMessage(username, content, 'LIVE_OPEN_PLATFORM_DM', meta)
+    }
+    case 'LIVE_OPEN_PLATFORM_DM_MIRROR': {
+      const content = pickString(data.msg, data.message, data.content)
+      if (!content) {
+        return null
+      }
+
+      return createDanmuMessage('跨房弹幕', content, 'LIVE_OPEN_PLATFORM_DM_MIRROR', {
+        ...meta,
+        openLiveMirror: true,
+      })
     }
     case 'SEND_GIFT': {
       const giftName = pickString(data.gift_name, data.giftName, data.name) || '礼物'

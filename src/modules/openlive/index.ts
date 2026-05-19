@@ -69,7 +69,21 @@ export function resolveOpenLiveTone(state: OpenLiveStateSnapshot | null): 'succe
 }
 
 export function resolveOpenLiveMessageTags(
-  message: Pick<BaseMessage, 'provider' | 'userLevel' | 'medalName' | 'medalLevel' | 'guardLabel' | 'likeCount' | 'rawCommand'>,
+  message: Pick<
+    BaseMessage,
+    | 'provider'
+    | 'userLevel'
+    | 'medalName'
+    | 'medalLevel'
+    | 'guardLabel'
+    | 'likeCount'
+    | 'rawCommand'
+    | 'openLiveDmType'
+    | 'openLiveGloryLevel'
+    | 'openLiveIsAdmin'
+    | 'openLiveMirror'
+    | 'openLiveReplyUsername'
+  >,
 ): string[] {
   const tags: string[] = []
 
@@ -91,6 +105,26 @@ export function resolveOpenLiveMessageTags(
 
   if (message.rawCommand === 'LIKE_INFO_V3_CLICK' && typeof message.likeCount === 'number' && message.likeCount > 0) {
     tags.push(`赞 x${message.likeCount}`)
+  }
+
+  if (message.openLiveMirror) {
+    tags.push('跨房')
+  }
+
+  if (message.openLiveDmType === 1) {
+    tags.push('表情弹幕')
+  }
+
+  if (message.openLiveIsAdmin) {
+    tags.push('房管')
+  }
+
+  if (typeof message.openLiveGloryLevel === 'number' && message.openLiveGloryLevel > 0) {
+    tags.push(`荣耀 ${message.openLiveGloryLevel}`)
+  }
+
+  if (message.openLiveReplyUsername) {
+    tags.push(`@${message.openLiveReplyUsername}`)
   }
 
   return tags
