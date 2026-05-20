@@ -30,3 +30,5 @@ tauri-plugin-process = "2"
 tauri-plugin-shell = "2"
 tauri-plugin-single-instance = { version = "2", features = ["deep-link"] }
 tauri-plugin-updater = "2"
+[patch.crates-io]
+glib = "0.20.0"
