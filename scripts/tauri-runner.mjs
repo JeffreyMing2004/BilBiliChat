@@ -7,9 +7,11 @@ const hasCustomConfig = args.includes('--config')
 const tauriArgs = isMacDev && !hasCustomConfig
   ? [...args, '--config', 'src-tauri/tauri.dev.conf.json']
   : args
-const tauriBin = process.platform === 'win32' ? 'tauri.cmd' : 'tauri'
+const isWindows = process.platform === 'win32'
+const tauriBin = isWindows ? 'cmd.exe' : 'tauri'
+const tauriCommandArgs = isWindows ? ['/c', 'tauri.cmd', ...tauriArgs] : tauriArgs
 
-const child = spawn(tauriBin, tauriArgs, {
+const child = spawn(tauriBin, tauriCommandArgs, {
   stdio: 'inherit',
   env: process.env,
 })
