@@ -83,47 +83,104 @@ export interface DanmuInfoResult {
   host: string
 }
 
-async function fetchWebViewJson<T>(url: string): Promise<T> {
-  // 使用 WebView 原生 fetch，携带浏览器引擎的 cookie，绕过 Tauri HTTP 插件的风控限制
-  const response = await fetch(url, {
-    headers: {
-      Accept: 'application/json, text/plain, */*',
-      Origin: 'https://live.bilibili.com',
-      Referer: 'https://live.bilibili.com/',
-      'User-Agent': navigator.userAgent || 'Mozilla/5.0',
-    },
-    credentials: 'include',
-  })
+/**
+ * 通过访问直播间 HTML 页面，从内嵌的 JSON 数据中提取 WebSocket 认证 token。
+ * 这是最接近真实浏览器行为的方式，能通过 Bilibili 的风控。
+ */
+async function fetchDanmuInfoFromRoomPage(roomId: number): Promise<DanmuInfoResult> {
+  const roomUrl = `https://live.bilibili.com/${roomId}`
+  logInfo('service', `通过直播间页面获取弹幕Token：${roomUrl}`)
 
-  if (!response.ok) {
-    throw new Error(`请求失败: ${response.status} ${response.statusText}`)
+  let html = ''
+  try {
+    const response = await appFetch(roomUrl, {
+      headers: {
+        Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'User-Agent': navigator.userAgent || 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko)',
+      },
+      method: 'GET',
+      timeout: 10_000,
+    })
+
+    html = await response.text()
+    logDebug('service', `直播间页面获取成功：status=${response.status} size=${html.length}`)
+  } catch (err) {
+    throw new Error(`获取页面失败: ${err instanceof Error ? err.message : String(err)}`)
   }
 
-  return response.json() as Promise<T>
+  if (html.length < 500) {
+    throw new Error(`页面内容过短(${html.length}字节)，可能被重定向或拦截`)
+  }
+
+  // 提取 __NEPTUNE_IS_MY_WAIFU__
+  let token = ''
+  let host = ''
+
+  const neptuneMatch = html.match(/window\.__NEPTUNE_IS_MY_WAIFU__\s*=\s*({.*?});\s*<\/script>/s)
+  if (neptuneMatch?.[1]) {
+    try {
+      const data = JSON.parse(neptuneMatch[1])
+      token = data?.roomInfoRes?.data?.room_info?.danmaku_info?.token
+        ?? data?.danmaku_info?.token
+        ?? ''
+      const hostList = data?.roomInfoRes?.data?.room_info?.danmaku_info?.host_server_list
+        ?? data?.host_server_list
+        ?? []
+      if (hostList?.length) {
+        const wssServer = hostList.find((s: { wss_port?: number }) => s.wss_port && s.wss_port > 0)
+        if (wssServer) host = `wss://${wssServer.host}:${wssServer.wss_port}/sub`
+      }
+    } catch {
+      logWarn('service', 'NEPTUNE JSON 解析失败')
+    }
+  }
+
+  // 备用：正则搜索 token
+  if (!token) {
+    const tokenMatch = html.match(/"token"\s*:\s*"([a-fA-F0-9]{8,})"/)
+    if (tokenMatch?.[1]) token = tokenMatch[1]
+  }
+
+  if (token) {
+    logInfo('service', `页面提取Token成功：roomId=${roomId} tokenLength=${token.length}`)
+    return { token, host }
+  }
+
+  throw new Error(`页面中未找到弹幕Token (页面${html.length}字节)`)
 }
 
 export async function fetchDanmuInfo(roomId: number, accessToken?: string): Promise<DanmuInfoResult> {
-  const baseUrl = `${DANMU_INFO_API}?id=${encodeURIComponent(String(roomId))}&type=0`
-  const url = accessToken ? `${baseUrl}&access_key=${accessToken}` : baseUrl
-  logInfo('service', `开始获取弹幕信息：roomId=${roomId} url=${baseUrl} hasToken=${String(!!accessToken)} runtime=${isTauriRuntime() ? 'tauri' : 'web'}`)
+  const apiUrl = `${DANMU_INFO_API}?id=${encodeURIComponent(String(roomId))}&type=0`
+  const url = accessToken ? `${apiUrl}&access_key=${accessToken}` : apiUrl
+  logInfo('service', `开始获取弹幕信息：roomId=${roomId} hasToken=${String(!!accessToken)}`)
 
-  let result: DanmuInfoResponse
+  // 策略1: 优先从直播间页面提取 token（模拟浏览器，绕过 API 风控）
   try {
-    // 在 Tauri 环境下优先使用 WebView 原生 fetch（可携带 WebView cookie）
-    if (isTauriRuntime()) {
-      try {
-        result = await fetchWebViewJson<DanmuInfoResponse>(url)
-      } catch (webviewError) {
-        logWarn('service', `WebView fetch 获取弹幕信息失败，回退 Tauri HTTP：${webviewError instanceof Error ? webviewError.message : 'unknown'}`)
-        result = await requestJson<DanmuInfoResponse>(url)
-      }
-    } else {
-      result = await requestJson<DanmuInfoResponse>(url)
-    }
-  } catch (error) {
-    const message = error instanceof Error ? error.message : '弹幕信息获取失败'
-    throw new Error(message)
+    return await fetchDanmuInfoFromRoomPage(roomId)
+  } catch (pageError) {
+    logWarn('service', `页面提取失败：${pageError instanceof Error ? pageError.message : String(pageError)}`)
   }
+
+  // 策略2: 尝试 Danmu/getConf API（比 getDanmuInfo 宽松）
+  try {
+    const confUrl = `https://api.live.bilibili.com/room/v1/Danmu/getConf?room_id=${roomId}&platform=web`
+    const confResult = await requestJson<{ code: number; message?: string; data?: { token?: string; host_server_list?: Array<{ host: string; port: number; wss_port: number }> } }>(confUrl)
+    if (confResult.code === 0 && confResult.data?.token) {
+      const hostList = confResult.data.host_server_list ?? []
+      const host = hostList.find((h) => h.wss_port > 0)
+      logInfo('service', `Danmu/getConf 获取成功：roomId=${roomId}`)
+      return {
+        token: confResult.data.token,
+        host: host ? `${host.host}:${host.wss_port}` : '',
+      }
+    }
+    logWarn('service', `Danmu/getConf 失败：code=${confResult.code}`)
+  } catch (confError) {
+    logWarn('service', `Danmu/getConf 异常：${confError instanceof Error ? confError.message : String(confError)}`)
+  }
+
+  // 策略3: 最后尝试 getDanmuInfo API（可能触发 -352 风控）
+  const result = await requestJson<DanmuInfoResponse>(url)
 
   if (result.code !== 0 || !result.data?.token) {
     logWarn('service', `弹幕信息接口返回异常：roomId=${roomId} code=${result.code} message=${result.message || 'unknown'}`)
@@ -137,8 +194,7 @@ export async function fetchDanmuInfo(roomId: number, accessToken?: string): Prom
     : hostList.length > 0
       ? `${hostList[0].host}:${hostList[0].wss_port || hostList[0].port}`
       : ''
-  const token = result.data.token
 
-  logInfo('service', `弹幕信息获取成功：roomId=${roomId} token已获取 host=${host || '使用默认地址'}`)
-  return { token, host }
+  logInfo('service', `弹幕信息API获取成功：roomId=${roomId} host=${host || '使用默认地址'}`)
+  return { token: result.data.token, host }
 }

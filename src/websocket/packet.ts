@@ -57,7 +57,7 @@ export function createAuthPacket(roomId: number, token?: string): ArrayBuffer {
   const authPayload: Record<string, unknown> = {
     uid: 0,
     roomid: roomId,
-    protover: 3,
+    protover: 2, // 使用 Deflate 压缩（浏览器原生支持），避免 Brotli WASM 加载失败
     platform: 'web',
     type: 2,
   }
