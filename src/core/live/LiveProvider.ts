@@ -26,6 +26,10 @@ export interface LiveProviderOptions {
   reconnectInterval: number
   autoReconnect: boolean
   openLiveIdentityCode?: string
+  /** Bilibili WebSocket 认证 token */
+  danmuToken?: string
+  /** 可选的 WebSocket 服务器地址 */
+  danmuHost?: string
   onStatus: (payload: LiveProviderStatusPayload) => void
   onPopularity: (popularity: number) => void
   onLatency?: (latency: number) => void

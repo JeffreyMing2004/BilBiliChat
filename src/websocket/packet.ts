@@ -53,16 +53,20 @@ export function createPacket(
   return buffer
 }
 
-export function createAuthPacket(roomId: number): ArrayBuffer {
+export function createAuthPacket(roomId: number, token?: string): ArrayBuffer {
+  const authPayload: Record<string, unknown> = {
+    uid: 0,
+    roomid: roomId,
+    protover: 3,
+    platform: 'web',
+    type: 2,
+  }
+  if (token) {
+    authPayload.key = token
+  }
   return createPacket(
     PacketOperation.Auth,
-    JSON.stringify({
-      uid: 0,
-      roomid: roomId,
-      protover: 3,
-      platform: 'web',
-      type: 2,
-    }),
+    JSON.stringify(authPayload),
   )
 }
 

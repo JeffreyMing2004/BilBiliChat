@@ -42,6 +42,10 @@ export interface RoomConnectionOptions {
   autoReconnect: boolean
   providerKind?: LiveProviderKind
   openLiveIdentityCode?: string
+  /** Bilibili WebSocket 认证 token，通过 getDanmuInfo API 获取 */
+  danmuToken?: string
+  /** 可选的 WebSocket 服务器地址，来自 getDanmuInfo host_list */
+  danmuHost?: string
 }
 
 export interface RoomConnectionState {

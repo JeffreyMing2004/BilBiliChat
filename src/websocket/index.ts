@@ -18,6 +18,10 @@ interface LiveDanmuSocketOptions {
   roomId: number
   reconnectInterval: number
   autoReconnect: boolean
+  /** Bilibili WebSocket 认证 token */
+  token?: string
+  /** 可选的 WebSocket 服务器地址 */
+  host?: string
   onStatus: (payload: {
     status: LiveSocketStatus
     statusText: string
@@ -101,12 +105,20 @@ export class LiveDanmuSocket {
     }
   }
 
+  private buildWebSocketUrl(): string {
+    if (this.options.host) {
+      return `wss://${this.options.host}/sub`
+    }
+    return BILIBILI_WEBSOCKET_URL
+  }
+
   private openSocket(status: 'connecting' | 'reconnecting'): void {
     this.isAuthenticated = false
-    this.socket = new WebSocket(BILIBILI_WEBSOCKET_URL)
+    const wsUrl = this.buildWebSocketUrl()
+    this.socket = new WebSocket(wsUrl)
     this.socket.binaryType = 'arraybuffer'
 
-    logInfo('connection', `开始连接直播间 ${this.options.roomId}`)
+    logInfo('connection', `开始连接直播间 ${this.options.roomId}，WebSocket: ${wsUrl}，token: ${this.options.token ? '已提供' : '未提供'}`)
     this.emitStatus(
       status,
       status === 'reconnecting' ? `正在重连，第 ${this.reconnectCount} 次` : '正在连接 WebSocket',
@@ -117,7 +129,7 @@ export class LiveDanmuSocket {
         return
       }
 
-      this.socket.send(createAuthPacket(this.options.roomId))
+      this.socket.send(createAuthPacket(this.options.roomId, this.options.token))
       logInfo('websocket', 'WebSocket 已连接，认证包已发送')
       this.emitStatus(status, 'WebSocket 已连接，正在发送认证包')
       this.startAuthTimeout()

@@ -1,4 +1,4 @@
-import type { RoomInitResponse } from '../types/api'
+import type { RoomInitResponse, DanmuInfoResponse } from '../types/api'
 import { logDebug, logError, logInfo, logWarn } from '../core/logger/Logger'
 import { appFetch, isTauriRuntime } from '../utils/http'
 
@@ -24,33 +24,32 @@ function normalizeRoomServiceError(error: unknown, fallback: string): Error {
   return new Error(fallback)
 }
 
-async function requestJson<T>(url: string): Promise<T> {
+async function requestJson<T>(url: string, options: { headers?: Record<string, string> } = {}): Promise<T> {
   let lastError: unknown = null
+  const mergedHeaders = new Headers(options.headers ?? {})
 
   for (let attempt = 0; attempt < 2; attempt += 1) {
     try {
-      logDebug('service', `房间解析请求开始：attempt=${attempt + 1} runtime=${isTauriRuntime() ? 'tauri-http' : 'web-fetch'} url=${url}`)
+      logDebug('service', `HTTP请求开始：attempt=${attempt + 1} runtime=${isTauriRuntime() ? 'tauri-http' : 'web-fetch'} url=${url}`)
       const response = await appFetch(url, {
-        headers: {
-          Accept: 'application/json',
-        },
+        headers: mergedHeaders,
         method: 'GET',
         timeout: 10_000,
       })
 
-      logDebug('service', `房间解析响应已返回：status=${response.status} ok=${String(response.ok)} url=${url}`)
+      logDebug('service', `HTTP响应已返回：status=${response.status} ok=${String(response.ok)} url=${url}`)
 
       if (!response.ok) {
         throw new Error(`请求失败: ${response.status} ${response.statusText}`)
       }
 
       const json = (await response.json()) as T
-      logDebug('service', `房间解析 JSON 解析成功：url=${url}`)
+      logDebug('service', `JSON 解析成功：url=${url}`)
       return json
     } catch (error) {
       lastError = error
       const message = error instanceof Error ? error.message : '请求异常'
-      logWarn('service', `房间解析请求失败：attempt=${attempt + 1} url=${url} error=${message}`)
+      logWarn('service', `HTTP请求失败：attempt=${attempt + 1} url=${url} error=${message}`)
       if (attempt === 1) {
         break
       }
@@ -58,7 +57,7 @@ async function requestJson<T>(url: string): Promise<T> {
   }
 
   const normalizedError = normalizeRoomServiceError(lastError, '直播间号解析失败')
-  logError('service', `房间解析最终失败：url=${url} error=${normalizedError.message}`)
+  logError('service', `HTTP请求最终失败：url=${url} error=${normalizedError.message}`)
   throw normalizedError
 }
 
@@ -75,4 +74,71 @@ export async function resolveRoomId(roomId: string): Promise<number> {
 
   logInfo('service', `房间号解析成功：input=${input} resolved=${result.data.room_id}`)
   return result.data.room_id
+}
+
+const DANMU_INFO_API = 'https://api.live.bilibili.com/xlive/web-room/v1/index/getDanmuInfo'
+
+export interface DanmuInfoResult {
+  token: string
+  host: string
+}
+
+async function fetchWebViewJson<T>(url: string): Promise<T> {
+  // 使用 WebView 原生 fetch，携带浏览器引擎的 cookie，绕过 Tauri HTTP 插件的风控限制
+  const response = await fetch(url, {
+    headers: {
+      Accept: 'application/json, text/plain, */*',
+      Origin: 'https://live.bilibili.com',
+      Referer: 'https://live.bilibili.com/',
+      'User-Agent': navigator.userAgent || 'Mozilla/5.0',
+    },
+    credentials: 'include',
+  })
+
+  if (!response.ok) {
+    throw new Error(`请求失败: ${response.status} ${response.statusText}`)
+  }
+
+  return response.json() as Promise<T>
+}
+
+export async function fetchDanmuInfo(roomId: number, accessToken?: string): Promise<DanmuInfoResult> {
+  const baseUrl = `${DANMU_INFO_API}?id=${encodeURIComponent(String(roomId))}&type=0`
+  const url = accessToken ? `${baseUrl}&access_key=${accessToken}` : baseUrl
+  logInfo('service', `开始获取弹幕信息：roomId=${roomId} url=${baseUrl} hasToken=${String(!!accessToken)} runtime=${isTauriRuntime() ? 'tauri' : 'web'}`)
+
+  let result: DanmuInfoResponse
+  try {
+    // 在 Tauri 环境下优先使用 WebView 原生 fetch（可携带 WebView cookie）
+    if (isTauriRuntime()) {
+      try {
+        result = await fetchWebViewJson<DanmuInfoResponse>(url)
+      } catch (webviewError) {
+        logWarn('service', `WebView fetch 获取弹幕信息失败，回退 Tauri HTTP：${webviewError instanceof Error ? webviewError.message : 'unknown'}`)
+        result = await requestJson<DanmuInfoResponse>(url)
+      }
+    } else {
+      result = await requestJson<DanmuInfoResponse>(url)
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '弹幕信息获取失败'
+    throw new Error(message)
+  }
+
+  if (result.code !== 0 || !result.data?.token) {
+    logWarn('service', `弹幕信息接口返回异常：roomId=${roomId} code=${result.code} message=${result.message || 'unknown'}`)
+    throw new Error(result.message || '弹幕信息获取失败')
+  }
+
+  const hostList = result.data.host_list ?? []
+  const wssHost = hostList.find((h) => h.wss_port > 0)
+  const host = wssHost
+    ? `${wssHost.host}:${wssHost.wss_port}`
+    : hostList.length > 0
+      ? `${hostList[0].host}:${hostList[0].wss_port || hostList[0].port}`
+      : ''
+  const token = result.data.token
+
+  logInfo('service', `弹幕信息获取成功：roomId=${roomId} token已获取 host=${host || '使用默认地址'}`)
+  return { token, host }
 }

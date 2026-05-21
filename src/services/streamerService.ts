@@ -31,13 +31,27 @@ async function requestJson<T>(url: string): Promise<T> {
   for (let attempt = 0; attempt < 2; attempt += 1) {
     try {
       logDebug('service', `主播信息请求开始：attempt=${attempt + 1} runtime=${isTauriRuntime() ? 'tauri-http' : 'web-fetch'} url=${url}`)
-      const response = await appFetch(url, {
-        headers: {
-          Accept: 'application/json',
-        },
-        method: 'GET',
-        timeout: 10_000,
-      })
+      let response: Response
+      // 在 Tauri 环境下，对主播信息接口也用 WebView fetch 尝试绕过风控
+      if (isTauriRuntime() && attempt === 0) {
+        response = await fetch(url, {
+          headers: {
+            Accept: 'application/json, text/plain, */*',
+            Origin: 'https://live.bilibili.com',
+            Referer: 'https://live.bilibili.com/',
+            'User-Agent': navigator.userAgent || 'Mozilla/5.0',
+          },
+          credentials: 'include',
+        })
+      } else {
+        response = await appFetch(url, {
+          headers: {
+            Accept: 'application/json',
+          },
+          method: 'GET',
+          timeout: 10_000,
+        })
+      }
 
       logDebug('service', `主播信息响应已返回：status=${response.status} ok=${String(response.ok)} url=${url}`)
 

@@ -41,6 +41,8 @@ export class ConnectionManager {
         reconnectInterval: options.reconnectInterval,
         autoReconnect: options.autoReconnect,
         openLiveIdentityCode: options.openLiveIdentityCode,
+        danmuToken: options.danmuToken,
+        danmuHost: options.danmuHost,
         onStatus: (payload) => {
           payload.providerKind ??= options.providerKind ?? 'public'
           payload.openLive ??= session.openLiveState

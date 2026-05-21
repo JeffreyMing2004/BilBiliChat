@@ -8,8 +8,9 @@ import { recoveryManager } from '../recovery/RecoveryManager'
 import { windowBridge } from '../windows/WindowBridge'
 import { loadStorageItem, saveStorageItem, activeRoomStorageKey, roomsStorageKey } from '../../settings'
 import { calculateTopContributors } from '../../services/rankingService'
-import { resolveRoomId } from '../../services/roomService'
+import { fetchDanmuInfo, resolveRoomId } from '../../services/roomService'
 import { fetchStreamerProfile } from '../../services/streamerService'
+import { useAuthStore } from '../../stores/auth'
 import type { AppSettings } from '../../types/settings'
 import type { ConnectionStatusPayload } from '../../types/websocket'
 import type { LiveMessage } from '../../types/message'
@@ -532,6 +533,29 @@ export class RoomManager {
         statusText: '真实房间号解析成功',
       })
 
+      logDebug('rooms', `准备获取弹幕认证Token：roomKey=${roomKey} resolved=${resolvedRoomId}`)
+      this.updateRoom(roomKey, {
+        statusText: '正在获取弹幕认证Token',
+      })
+      let danmuToken = ''
+      let danmuHost = ''
+      try {
+        const authStore = useAuthStore()
+        const danmuInfo = await fetchDanmuInfo(resolvedRoomId, authStore.session?.tokens.accessToken)
+        danmuToken = danmuInfo.token
+        danmuHost = danmuInfo.host
+        logInfo('rooms', `弹幕Token获取成功：roomKey=${roomKey} host=${danmuHost || '默认'} tokenLength=${danmuToken.length}`)
+        this.updateRoom(roomKey, {
+          statusText: '弹幕认证Token已获取',
+        })
+      } catch (error) {
+        const message = error instanceof Error ? error.message : '弹幕信息获取失败'
+        logWarn('rooms', `弹幕信息获取失败，将尝试无Token连接：roomKey=${roomKey} resolved=${resolvedRoomId} error=${message}`)
+        this.updateRoom(roomKey, {
+          statusText: '弹幕信息获取失败，尝试无Token连接',
+        })
+      }
+
       logDebug('rooms', `准备拉取主播资料：roomKey=${roomKey} resolved=${resolvedRoomId}`)
       let profile: StreamerProfile
       try {
@@ -565,6 +589,8 @@ export class RoomManager {
         autoReconnect: this.settings.autoReconnect,
         providerKind: this.settings.liveProvider,
         openLiveIdentityCode: this.settings.openLiveIdentityCode,
+        danmuToken,
+        danmuHost,
       })
 
       logInfo('rooms', `房间 ${inputRoomId} 连接流程已交给 ConnectionManager`)
@@ -575,11 +601,26 @@ export class RoomManager {
         try {
           logWarn('rooms', `OpenLive 失败，准备回退 Public WS：roomKey=${roomKey} resolved=${this.rooms[roomKey]?.resolvedRoomId ?? 0} error=${message}`)
           this.addMessage(roomKey, createSystemNotice(`OpenLive 连接失败，已回退到 Public WS：${message}`, 'warning', 'OPENLIVE_FALLBACK'))
+          const fallbackRoomId = this.rooms[roomKey]?.resolvedRoomId ?? 0
+          let fallbackToken = ''
+          let fallbackHost = ''
+          if (fallbackRoomId > 0) {
+            try {
+              const authStore = useAuthStore()
+              const danmuInfo = await fetchDanmuInfo(fallbackRoomId, authStore.session?.tokens.accessToken)
+              fallbackToken = danmuInfo.token
+              fallbackHost = danmuInfo.host
+            } catch {
+              // 回退时获取token失败不阻塞，尝试无token连接
+            }
+          }
           await connectionManager.connect(roomKey, {
-            roomId: this.rooms[roomKey]?.resolvedRoomId ?? 0,
+            roomId: fallbackRoomId,
             reconnectInterval: 5,
             autoReconnect: this.settings.autoReconnect,
             providerKind: 'public',
+            danmuToken: fallbackToken,
+            danmuHost: fallbackHost,
           })
           logInfo('rooms', `Public WS 回退成功：roomKey=${roomKey}`)
           return

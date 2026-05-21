@@ -14,6 +14,8 @@ export class PublicLiveProvider implements LiveProvider {
       roomId: options.roomId,
       reconnectInterval: options.reconnectInterval,
       autoReconnect: options.autoReconnect,
+      token: options.danmuToken,
+      host: options.danmuHost,
       onStatus: (payload) => {
         this.connected = payload.status === 'connected'
         options.onStatus(payload)
